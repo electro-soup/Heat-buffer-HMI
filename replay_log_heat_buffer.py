@@ -7,7 +7,7 @@ import time
 def interpolate_temperature_data(temperature_list):
      #interpolating temperature data
     extrapolated_list = []
-    num_of_intervals_between = 7
+    num_of_intervals_between = 9
 
     num_of_intervals_between+=1 #to get indeed such interval
             
@@ -98,9 +98,9 @@ def write_log_values_to_serial(file_name):
         interpolated_temps_list = interpolate_temperature_data(temperatures)    
         write_temperature_list_to_serial(interpolated_temps_list, 0x4000) 
             
-        time.sleep(0.0001)
+        time.sleep(0.00001)
         
-serial = serial.Serial("COM11", 115200)
+serial = serial.Serial("COM6", 115200)
 
 
 dwin_command  = 0x5AA5
