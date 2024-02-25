@@ -4,14 +4,18 @@ import struct
 import time
 import serial
 import settings
+import utils
 
 dwin_command  = 0x5AA5
 master_init_adress = 0x4000
 
+lcd = utils.DWIN_LCD_Control("COM6")
+lcd.set_brigthness(50)
+
 def interpolate_temperature_data(temperature_list):
      #interpolating temperature data
     extrapolated_list = []
-    num_of_intervals_between = 10
+    num_of_intervals_between = 9
 
     num_of_intervals_between+=1 #to get indeed such interval
             
@@ -139,7 +143,8 @@ def on_connect(client, userdata, flags, reason_code, properties):
         # our subscribed is persisted across reconnections.
         client.subscribe("$SYS/#")
 
-serial = serial.Serial("COM6", 115200)
+#serial = serial.Serial("COM6", 115200)
+serial = lcd.serial
 mqttc = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
 mqttc.on_connect = on_connect
 mqttc.on_message = on_message
