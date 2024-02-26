@@ -24,7 +24,7 @@ all_data = {}
 
 for temp_sensor, nymea_id in heat_buffer_temperature_ids.items():
     
-    query = f'SELECT time, temperature::integer FROM hours."state-{{{nymea_id}}}-temperature" WHERE time > now() - 200d  ORDER BY time ASC'
+    query = f'SELECT time, MEAN(temperature) FROM minutes."state-{{{nymea_id}}}-temperature" WHERE time > now() - 200d  GROUP BY time(10m) fill(previous)  ORDER BY time ASC'
     result = client.query(query)
     lol = []
 
@@ -36,20 +36,20 @@ for temp_sensor, nymea_id in heat_buffer_temperature_ids.items():
        #print(dict)
 
     
-    new_time_temperature_dict = {d['time']: d['temperature'] for d in lol}
+    new_time_temperature_dict = {d['time']: d['mean'] for d in lol}
 
     for time, temperature in new_time_temperature_dict.items():
-         
-         if time in all_data:
+         if temperature is not None:
+           if time in all_data:
               all_data[time].append(temperature)
-         else:
+           else:
               all_data[time] = [temperature]    
     
 
-#for time, temperature in all_data.items():
-        #print(time, temperature)
+for time, temperature in all_data.items():
+        print(time, temperature)
 
-pickle.dump(all_data, open('nymea.dat', 'wb'))
+pickle.dump(all_data, open('nymea_minutes.dat', 'wb'))
 
 
 client.close()
