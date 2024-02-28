@@ -18,18 +18,23 @@ import uasyncio as asyncio
 from machine import UART
 import json
 import struct
+
 outages = 0
 temp = []
 uart0 = UART(2, baudrate=115200, tx=17, rx=16)
 temp = bytes([0x5A, 0xA5, 0x05, 0x82, 0x20, 0x00, 0x12, 0x11, 0x11, 0x11])
 uart0.write(temp)
 
-def get_Xiaomi(msg):
+def get_Xiaomi_DWIN_update(msg, temperature_VP, humidity_VP, uart):
+    dwin_command  = 0x5AA5
     temp_msg = msg.decode()
     temp_dict = json.loads(temp_msg)
     temperature = int(temp_dict['tempc'])
     humidify = temp_dict['hum']
-    return temperature, humidify
+    payload = struct.pack('>HBBHh',dwin_command, 0x05, 0x82, temperature_VP, temperature )
+    uart.write(payload)
+    payload = struct.pack('>HBBHh',dwin_command, 0x05, 0x82, humidity_VP, humidify )
+    uart.write(payload)
 
 # Subscription callback
 def sub_cb(topic, msg, retained):
@@ -40,52 +45,26 @@ def sub_cb(topic, msg, retained):
     init_adress = 0x2000
     
     if topic.decode() == 'home/OMG_ESP32_BLE/BTtoMQTT/A4C138F53164':
-         temperature, humidify = get_Xiaomi(msg)
-         payload = struct.pack('>HBBHh',dwin_command, 0x05, 0x82, 0x3004, temperature )
-         uart0.write(payload)
-         payload = struct.pack('>HBBHh',dwin_command, 0x05, 0x82, 0x3006, humidify )
-         uart0.write(payload)
-         
+         get_Xiaomi_DWIN_update(msg, 0x3004, 0x3006, uart0)
+          
     if topic.decode() == 'home/OMG_ESP32_BLE/BTtoMQTT/A4C138D1110F':
-         temperature, humidify = get_Xiaomi(msg)
-         payload = struct.pack('>HBBHh',dwin_command, 0x05, 0x82, 0x300C, temperature )
-         uart0.write(payload)
-         payload = struct.pack('>HBBHh',dwin_command, 0x05, 0x82, 0x300E, humidify )
-         uart0.write(payload)
+         get_Xiaomi_DWIN_update(msg, 0x300C, 0x300E, uart0)
+         
     if topic.decode() == 'home/OMG_ESP32_BLE/BTtoMQTT/A4C138250A06':
-         temperature, humidify = get_Xiaomi(msg)
-         payload = struct.pack('>HBBHh',dwin_command, 0x05, 0x82, 0x3000, temperature )
-         uart0.write(payload)
-         payload = struct.pack('>HBBHh',dwin_command, 0x05, 0x82, 0x3002, humidify )
-         uart0.write(payload)
-         ...
+         get_Xiaomi_DWIN_update(msg, 0x3000, 0x3002, uart0)
+         
     if topic.decode() == 'home/OMG_ESP32_BLE/BTtoMQTT/A4C138768B1F':
-         temperature, humidify = get_Xiaomi(msg)
-         payload = struct.pack('>HBBHh',dwin_command, 0x05, 0x82, 0x3010, temperature )
-         uart0.write(payload)
-         payload = struct.pack('>HBBHh',dwin_command, 0x05, 0x82, 0x3012, humidify )
-         uart0.write(payload)
-         ...
+         get_Xiaomi_DWIN_update(msg, 0x3010, 0x3012, uart0)
+         
     if topic.decode() == 'home/OMG_ESP32_BLE/BTtoMQTT/A4C138425C0D':
-         temperature, humidify = get_Xiaomi(msg)
-         payload = struct.pack('>HBBHh',dwin_command, 0x05, 0x82, 0x3008, temperature )
-         uart0.write(payload)
-         payload = struct.pack('>HBBHh',dwin_command, 0x05, 0x82, 0x300A, humidify )
-         uart0.write(payload)
-         ...
+         get_Xiaomi_DWIN_update(msg, 0x3008, 0x300A, uart0)
     
     if topic.decode() == 'home/kotlownia/bufor':
          temp_msg = msg.decode()
          temp_dict = json.loads(temp_msg)
          print(temp_dict)
-         
-        
-         
-         print(temp_dict)
-         
+ 
          test_int = int(temp_dict['temp0'])
-        
-
 
          temperatures_dict = {}
          for sensors, values in sorted(temp_dict.items()):
