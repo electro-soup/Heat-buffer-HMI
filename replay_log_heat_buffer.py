@@ -100,15 +100,15 @@ def write_log_values_to_serial(file_name):
             
         time.sleep(0.00001)
         
-serial = serial.Serial("COM6", 115200)
+serial = serial.Serial("COM11", 115200)
 
 
 dwin_command  = 0x5AA5
 master_init_adress = 0x4000
 
-write_log_values_to_serial("capture.txt")
+#write_log_values_to_serial("capture.txt")
 
 #while True:
     
 
-serial.close()
+#serial.close()
