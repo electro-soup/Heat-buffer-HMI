@@ -1,0 +1,24 @@
+import pickle
+import replay_log_heat_buffer
+import time as timer
+import struct
+
+
+
+heat_buffer_temps = pickle.load(open('nymea.dat', 'rb'))
+
+for time, temperatures in heat_buffer_temps.items():
+     interpolated_temp = []
+    #print(time, temperatures)
+     interpolated_temp = replay_log_heat_buffer.interpolate_temperature_data(temperatures)
+     replay_log_heat_buffer.write_temperature_list_to_serial(interpolated_temp, 0x4000) 
+     replay_log_heat_buffer.write_temperature_list_to_serial_no_proccessing(temperatures, 0x2000)
+     timer.sleep(0.0002)
+     temp_byte_arr = time.encode()
+     print(temp_byte_arr)
+     payload = struct.pack('>HBBH',replay_log_heat_buffer.dwin_command, len(temp_byte_arr)+2, 0x82, 0x5000)
+     for byte in temp_byte_arr: #tak jak czatGPT powiedział
+        payload += struct.pack('s', bytes([byte]))
+     replay_log_heat_buffer.serial.write(payload)
+     #print(time)
+     #print(", ".join(hex(b) for b in payload))

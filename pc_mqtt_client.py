@@ -4,12 +4,12 @@ import struct
 import time
 import serial
 import settings
-import utils
+import DWIN_LCD
 
 dwin_command  = 0x5AA5
 master_init_adress = 0x4000
 
-lcd = utils.DWIN_LCD_Control("COM6")
+lcd = DWIN_LCD.DWIN_LCD_Control("COM6")
 lcd.set_brigthness(50)
 
 def interpolate_temperature_data(temperature_list):
@@ -144,7 +144,7 @@ def on_connect(client, userdata, flags, reason_code, properties):
         client.subscribe("$SYS/#")
 
 #serial = serial.Serial("COM6", 115200)
-serial = lcd.serial
+serial = lcd.serial #nasty way of passing reference to the serial port
 mqttc = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
 mqttc.on_connect = on_connect
 mqttc.on_message = on_message
