@@ -7,6 +7,8 @@ import epaper4in2
 from machine import Pin, SPI
 
 # SPIV on ESP32
+#VCC - GREY
+#GND - BROWN
 sck = Pin(13) 		#CLK YELLOW
 miso = Pin(19)		#?? whatever, connected to anything
 mosi = Pin(14)		#DIN BLUE
