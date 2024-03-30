@@ -7,13 +7,13 @@ import epaper4in2
 from machine import Pin, SPI
 
 # SPIV on ESP32
-sck = Pin(13)
-miso = Pin(19)
-mosi = Pin(14)
-dc = Pin(27)
-cs = Pin(15)
-rst = Pin(26)
-busy = Pin(25)
+sck = Pin(13) 		#CLK YELLOW
+miso = Pin(19)		#?? whatever, connected to anything
+mosi = Pin(14)		#DIN BLUE
+dc = Pin(27)		#GREEN
+cs = Pin(15)		#ORANGE
+rst = Pin(26)		#WHITE
+busy = Pin(25)		#VIOLET
 spi = SPI(1, baudrate=20000000, polarity=0, phase=0, sck=sck, miso=miso, mosi=mosi)
 
 e = epaper4in2.EPD(spi, cs, dc, rst, busy)
