@@ -125,7 +125,7 @@ class EPD:
         sleep_ms(200)
 
     # draw the current frame memory
-    def display_frame(self, frame_buffer_black, frame_buffer_red):
+    def display_frame(self, frame_buffer_black, frame_buffer_red, refresh):
         if (frame_buffer_black != None):
             self._command(DATA_START_TRANSMISSION_1)
             sleep_ms(2)
@@ -139,7 +139,8 @@ class EPD:
                 self._data(bytearray([frame_buffer_red[i]]))
             sleep_ms(2)
 
-        self._command(DISPLAY_REFRESH)
+        if refresh == 1:
+            self._command(DISPLAY_REFRESH)
         self.wait_until_idle()
 
     # to wake call reset() or init()

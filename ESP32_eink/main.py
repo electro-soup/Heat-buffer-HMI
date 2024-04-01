@@ -50,7 +50,7 @@ bufImage = hello_world_light
 fbImage = framebuf.FrameBuffer(bufImage, 128, 296, framebuf.MONO_HLSB)
 fb.blit(fbImage, 168, 2)
 
-e.display_frame(buf,buf) #why there is signle buf?
+#e.display_frame(buf,buf) #why there is signle buf?
 
 # --------------------
 
@@ -62,18 +62,18 @@ print('Image light')
 
 
 print('Frame buffer things')
-fb.fill(white)
-fb.text('Hello World',30,0,black)
-fb.pixel(30, 10, black)
-fb.hline(30, 30, 10, black)
-fb.vline(30, 50, 10, black)
-fb.line(30, 70, 40, 80, black)
-fb.rect(30, 90, 10, 10, black)
-fb.fill_rect(30, 110, 10, 10, black)
-for row in range(0,36):
-	fb.text(str(row),0,row*8,black)
-fb.text('Line 36',0,288,black)
-e.display_frame(buf,buf)
+#fb.fill(white)
+#fb.text('Hello World',30,0,black)
+#fb.pixel(30, 10, black)
+#fb.hline(30, 30, 10, black)
+#fb.vline(30, 50, 10, black)
+#fb.line(30, 70, 40, 80, black)
+#fb.rect(30, 90, 10, 10, black)
+#fb.fill_rect(30, 110, 10, 10, black)
+#for row in range(0,36):
+#	fb.text(str(row),0,row*8,black)
+#fb.text('Line 36',0,288,black)
+#e.display_frame(buf,buf)
 
 # --------------------
 
@@ -81,7 +81,7 @@ e.display_frame(buf,buf)
 black = 0
 white = 1
 # clear
-fb.fill(white)
+#fb.fill(white)
 # display as much as this as fits in the box
 str = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Etiam vel neque in elit tristique vulputate at et dui. Maecenas nec felis lectus. Pellentesque sit amet facilisis dui. Maecenas ac arcu euismod, tempor massa quis, ultricies est.'
 
@@ -102,7 +102,7 @@ def text_wrap(str,x,y,color,w,h,border=None):
 			break
 
 # clear
-fb.fill(white)
+#fb.fill(white)
 
 # draw text box 1
 # box position and dimensions
@@ -112,7 +112,7 @@ by = 8
 bw = 112 #  = 14 cols
 bh = 112 #  = 14 rows (196 chars in total)
 text_wrap(str,bx,by,black,bw,bh,black)
-e.display_frame(buf,buf)
+#e.display_frame(buf,buf)
 
 # draw text box 2
 print('Box 2 & 3')
@@ -129,10 +129,22 @@ bw = w//2 # 64 = 8 cols
 bh = 8 * 8 # 64 = 8 rows (64 chars in total)
 text_wrap(str,bx,by,black,bw,bh,None)
 
-fb.fill(white)
-e.display_frame(buf,buf)
+#fb.fill(white)
+#e.display_frame(buf,buf)
+
+for row in range(0,8):
+	fb.text("temperatura",200,row*16,black)
 
 
-e.sleep()
+#e.display_frame(buf,None)
+
+for row in range(0,8):
+	fb.text("temperatura",0,row*16,black)
+
+print("diplaying frame")
+#e.display_frame(None, buf)
+print("displaying frame end")
+
+#e.sleep()
 
 # --------------------
