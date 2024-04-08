@@ -66,9 +66,9 @@ GET_STATUS                     = const(0x71)
 #AUTO_MEASURE_VCOM              = const(0x80)
 #VCOM_VALUE                     = const(0x81)
 #VCM_DC_SETTING                 = const(0x82)
-#PARTIAL_WINDOW                 = const(0x90)
-#PARTIAL_IN                     = const(0x91)
-#PARTIAL_OUT                    = const(0x92)
+PARTIAL_WINDOW                 = const(0x90)
+PARTIAL_IN                     = const(0x91)
+PARTIAL_OUT                    = const(0x92)
 #PROGRAM_MODE                   = const(0xA0)
 #ACTIVE_PROGRAM                 = const(0xA1)
 #READ_OTP_DATA                  = const(0xA2)
@@ -125,7 +125,7 @@ class EPD:
         sleep_ms(200)
 
     # draw the current frame memory
-    def display_frame(self, frame_buffer_black, frame_buffer_red, refresh):
+    def display_frame(self, frame_buffer_black, frame_buffer_red):
         if (frame_buffer_black != None):
             self._command(DATA_START_TRANSMISSION_1)
             sleep_ms(2)
@@ -139,8 +139,8 @@ class EPD:
                 self._data(bytearray([frame_buffer_red[i]]))
             sleep_ms(2)
 
-        if refresh == 1:
-            self._command(DISPLAY_REFRESH)
+        
+        self._command(DISPLAY_REFRESH)
         self.wait_until_idle()
 
     # to wake call reset() or init()
@@ -149,3 +149,35 @@ class EPD:
         self._command(POWER_OFF)
         self.wait_until_idle()
         self._command(DEEP_SLEEP, b'\xA5') # check code
+    
+    def partial_refresh(self, horizontal_bank_start, horizontal_bank_stop, vertical_bank_start, vertical_bank_stop, PT_SCAN_ON_OFF):
+        self._command(PARTIAL_IN) #enter partial refresh
+        self.wait_until_idle()
+       # self._command(PARTIAL_WINDOW)
+       
+
+        def bytearray_to_bytes(byte_array):
+            return bytes([byte for byte in byte_array])
+
+        byte_0 = (horizontal_bank_start // 0xFF) & 0x01 
+        byte_1 = (horizontal_bank_start % 0xFF)  & 0xF8
+        byte_2 = (horizontal_bank_stop // 0xFF)  & 0x01 
+        byte_3 = (horizontal_bank_stop % 0xFF)   | 0x07
+        byte_4 = (vertical_bank_start // 0xFF) & 0x01
+        byte_5 = vertical_bank_start % 0xFF 
+        byte_6 = (vertical_bank_stop // 0xFF) & 0x1
+        byte_7 = vertical_bank_stop % 0xFF 
+        byte_8 = PT_SCAN_ON_OFF 
+        
+        print(f"byte_7 {byte_7}" )
+        data_to_send = bytearray([byte_0, byte_1, byte_2, byte_3, byte_4, byte_5, byte_6, byte_7, byte_8])
+        self._command(PARTIAL_WINDOW, bytearray_to_bytes(data_to_send))
+        print(bytearray_to_bytes(data_to_send))
+        self.wait_until_idle()
+        sleep_ms(2)
+        self._command(DISPLAY_REFRESH)
+        self.wait_until_idle()
+        self._command(PARTIAL_OUT)
+        self.wait_until_idle()
+        
+

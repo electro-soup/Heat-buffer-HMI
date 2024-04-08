@@ -31,11 +31,16 @@ y = 0
 # use a frame buffer
 # 400 * 300 / 8 = 15000 - thats a lot of pixels
 import framebuf
-buf = bytearray(w * h // 8)
-fb = framebuf.FrameBuffer(buf, w, h, framebuf.MONO_HLSB)
+buf_black = bytearray(w * h // 8)
+buf_red = bytearray(w * h // 8)
+#creating two buffers, one for black, second for red pixels
+
+fb_black = framebuf.FrameBuffer(buf_black, w, h, framebuf.MONO_HLSB)
+fb_red = framebuf.FrameBuffer(buf_red, w, h, framebuf.MONO_HLSB)
 black = 0
 white = 1
-fb.fill(white)
+red = 0
+fb_black.fill(white)
 
 # --------------------
 
@@ -45,10 +50,10 @@ from image_light import hello_world_light
 print('Image dark')
 bufImage = hello_world_dark
 fbImage = framebuf.FrameBuffer(bufImage, 128, 296, framebuf.MONO_HLSB)
-fb.blit(fbImage, 20, 2)
+fb_black.blit(fbImage, 20, 2)
 bufImage = hello_world_light
 fbImage = framebuf.FrameBuffer(bufImage, 128, 296, framebuf.MONO_HLSB)
-fb.blit(fbImage, 168, 2)
+fb_black.blit(fbImage, 168, 2)
 
 #e.display_frame(buf,buf) #why there is signle buf?
 
@@ -89,13 +94,13 @@ str = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Etiam vel neque 
 def text_wrap(str,x,y,color,w,h,border=None):
 	# optional box border
 	if border is not None:
-		fb.rect(x, y, w, h, border)
+		fb_black.rect(x, y, w, h, border)
 	cols = w // 8
 	# for each row
 	j = 0
 	for i in range(0, len(str), cols):
 		# draw as many chars fit on the line
-		fb.text(str[i:i+cols], x, y + j, color)
+		fb_black.text(str[i:i+cols], x, y + j, color)
 		j += 8
 		# dont overflow text outside the box
 		if j >= h:
@@ -129,22 +134,29 @@ bw = w//2 # 64 = 8 cols
 bh = 8 * 8 # 64 = 8 rows (64 chars in total)
 text_wrap(str,bx,by,black,bw,bh,None)
 
-#fb.fill(white)
-#e.display_frame(buf,buf)
+fb_black.fill(white)
+fb_red.fill(white)
+e.display_frame(buf_black,buf_black)
 
 for row in range(0,8):
-	fb.text("temperatura",200,row*16,black)
+	fb_black.text("temperatura",200,row*16,black)
 
 
-#e.display_frame(buf,None)
+e.display_frame(buf_black,None)
 
 for row in range(0,8):
-	fb.text("temperatura",0,row*16,black)
+	fb_red.text("temperatura",0,row*16,black)
+
+for row in range(0,8):
+	fb_black.text("temperatura",0,row*16,black)
 
 print("diplaying frame")
-#e.display_frame(None, buf)
+e.display_frame(buf_black, buf_red)
 print("displaying frame end")
 
 #e.sleep()
-
+print("test, 0-1 0-1, PT OFF")
+e.partial_refresh(0,1,0,1,0)
 # --------------------
+print("test, 0-1 0-1, PT ON")
+e.partial_refresh(0,1,0,1,1)
