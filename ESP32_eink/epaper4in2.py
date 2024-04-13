@@ -124,8 +124,7 @@ class EPD:
         self.rst(1)
         sleep_ms(200)
 
-    # draw the current frame memory
-    def display_frame(self, frame_buffer_black, frame_buffer_red):
+    def send_buffer(self, frame_buffer_black, frame_buffer_red):
         if (frame_buffer_black != None):
             self._command(DATA_START_TRANSMISSION_1)
             sleep_ms(2)
@@ -138,8 +137,9 @@ class EPD:
             for i in range(0, self.width * self.height // 8):
                 self._data(bytearray([frame_buffer_red[i]]))
             sleep_ms(2)
-
-        
+    # draw the current frame memory
+    def display_frame(self, frame_buffer_black, frame_buffer_red):
+        self.send_buffer(frame_buffer_black, frame_buffer_red) 
         self._command(DISPLAY_REFRESH)
         self.wait_until_idle()
 
