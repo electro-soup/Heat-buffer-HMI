@@ -156,7 +156,7 @@ print("displaying frame end")
 
 #e.sleep()
 print("test, 0-1 0-1, PT OFF")
-e.partial_refresh(0,1,0,1,0)
+e.partial_refresh(100,200,0,1,0)
 # --------------------
 print("test, 0-1 0-1, PT ON")
-e.partial_refresh(0,1,0,1,1)
+e.partial_refresh(0,100,0,100,1)

@@ -110,7 +110,10 @@ class EPD:
         self._command(POWER_ON)
         self.wait_until_idle()
         self._command(PANEL_SETTING, b'\x0F') # LUT from OTP
-
+        self.wait_until_idle()
+        self._command(VCOM_AND_DATA_INTERVAL_SETTING, b'\xF7') #set floating border (no border flickering) and correct LUT for colors
+        self.wait_until_idle()
+        
     def wait_until_idle(self):
         while self.busy.value() == BUSY:
             sleep_ms(100)
@@ -183,4 +186,29 @@ class EPD:
     def wake_up(self):
         self.reset()
         self.init()
-
+    
+    #DDX[1:0] - 11 for proper red and black
+    #VDB - border color - 00 - black, 01 - LUTW, 10 LUTR, 11 Floating - floating gets best result, no flashing border
+    def VCOM_CDI_settings(self, VBD, CDInterval):
+         
+        def bytearray_to_bytes(byte_array):
+            return bytes([byte for byte in byte_array])
+    
+        default = 0xF7
+        byte_0 = default
+    
+         # Ustawienie bitów dla VBD (bity 7 i 8)
+        VBD_bits = VBD & 0x03  # Upewnij się, że VBD ma maksymalnie 2 bity
+        byte_0 &= ~(0x03 << 6)  # Wyczyść bity 7 i 8
+        byte_0 |= (VBD_bits << 6)  # Ustaw nowe wartości
+    
+        # Ustawienie bitów dla CDInterval (bity od 1 do 4)
+        CDInterval_bits = CDInterval & 0x0F  # Upewnij się, że CDInterval ma maksymalnie 4 bity
+        byte_0 &= ~(0x0F << 0)  # Wyczyść bity od 1 do 4
+        byte_0 |= (CDInterval_bits << 0)  # Ustaw nowe wartości
+    
+        data_to_send = bytearray([byte_0])
+        print(data_to_send)
+        self._command(VCOM_AND_DATA_INTERVAL_SETTING, bytearray_to_bytes(data_to_send))
+        print(bytearray_to_bytes(data_to_send))
+        self.wait_until_idle()
