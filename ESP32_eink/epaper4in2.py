@@ -179,5 +179,8 @@ class EPD:
         self.wait_until_idle()
         self._command(PARTIAL_OUT)
         self.wait_until_idle()
-        
+    
+    def wake_up(self):
+        self.reset()
+        self.init()
 
