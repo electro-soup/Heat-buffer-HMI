@@ -19,6 +19,7 @@ class ThreeColorFrameBuffer:
         getattr(self.framebuffer_black, method_name)(*args, black_value[0], fill) if fill is not None else getattr(self.framebuffer_black, method_name)(*args, black_value[0])
         getattr(self.framebuffer_red, method_name)(*args, red_value[0], fill) if fill is not None else getattr(self.framebuffer_red, method_name)(*args, red_value[0])
 
+
     def fill(self, color_name):
         self._apply_color("fill", color_name=color_name)
 
@@ -42,3 +43,6 @@ class ThreeColorFrameBuffer:
 
     def text(self, string, x, y, color_name):
         self._apply_color("text", string, x, y, color_name=color_name)
+    
+    def poly(self, x, y, coords, color_name, fill=False):
+        self._apply_color("poly", x, y, coords, color_name = color_name, fill=fill)
