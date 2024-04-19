@@ -33,40 +33,33 @@ y = 0
 import framebuf
 buf_black = bytearray(w * h // 8)
 buf_red = bytearray(w * h // 8)
-#creating two buffers, one for black, second for red pixels
 
+#creating two buffers, one for black, second for red pixels
 fb_black = framebuf.FrameBuffer(buf_black, w, h, framebuf.MONO_HLSB)
 fb_red = framebuf.FrameBuffer(buf_red, w, h, framebuf.MONO_HLSB)
 black = 0
 white = 1
 red = 0
 fb_black.fill(white)
+fb_red.fill(white)
 
 # --------------------
 
 # write hello world with black bg and white text
-from image_dark import hello_world_dark
-from image_light import hello_world_light
-print('Image dark')
-bufImage = hello_world_dark
-fbImage = framebuf.FrameBuffer(bufImage, 128, 296, framebuf.MONO_HLSB)
-fb_black.blit(fbImage, 20, 2)
-bufImage = hello_world_light
-fbImage = framebuf.FrameBuffer(bufImage, 128, 296, framebuf.MONO_HLSB)
-fb_black.blit(fbImage, 168, 2)
-
-#e.display_frame(buf,buf) #why there is signle buf?
-
-# --------------------
-
-# write hello world with white bg and black text
-print('Image light')
-#e.display_frame(hello_world_light)
-
-# --------------------
+#from image_dark import hello_world_dark
+#from image_light import hello_world_light
+#print('Image dark')
+#bufImage = hello_world_dark
+#fbImage = framebuf.FrameBuffer(bufImage, 128, 296, framebuf.MONO_HLSB)
+#fb_black.blit(fbImage, 20, 2)
+#bufImage = hello_world_light
+#fbImage = framebuf.FrameBuffer(bufImage, 128, 296, framebuf.MONO_HLSB)
+#fb_black.blit(fbImage, 168, 2)
 
 
-print('Frame buffer things')
+
+
+
 #fb.fill(white)
 #fb.text('Hello World',30,0,black)
 #fb.pixel(30, 10, black)
@@ -81,6 +74,8 @@ print('Frame buffer things')
 #e.display_frame(buf,buf)
 
 # --------------------
+
+
 
 # wrap text inside a box
 black = 0
@@ -106,8 +101,6 @@ def text_wrap(str,x,y,color,w,h,border=None):
 		if j >= h:
 			break
 
-# clear
-#fb.fill(white)
 
 # draw text box 1
 # box position and dimensions
@@ -136,27 +129,126 @@ text_wrap(str,bx,by,black,bw,bh,None)
 
 fb_black.fill(white)
 fb_red.fill(white)
-e.display_frame(buf_black,buf_black)
+#e.display_frame(buf_black,buf_black)
 
-for row in range(0,8):
-	fb_black.text("temperatura",200,row*16,black)
+#adding another font test
+from writer import Writer
+import out_font
+
+class eink_text_display(framebuf.FrameBuffer):
+	def __init__(self, width, height, buffer):
+		self.width = width
+		self.height = height
+		self.buffer = buffer
+		self.mode = framebuf.MONO_HLSB
+		super().__init__(self.buffer,self.width,self.height, self.mode) #super?!?
+
+	def show(self):
+		...
+#dev function		
+def clear_screen():
+	fb_red.fill(white)
+	fb_black.fill(white)
+	e.display_frame(buf_black, buf_red)
+
+black_text_display = eink_text_display(400, 300, buf_black)
+red_text_display = eink_text_display(400,300, buf_red)
+
+writer_black = Writer(black_text_display, out_font)
+writer_red = Writer(red_text_display, out_font)
+
+#writer_black.bgcolor = white
+#writer_black.fgcolor = black
+
+#writer_red.bgcolor = white
+#writer_black.fgcolor = red
+
+#writer_black.set_textpos(black_text_display, 0, 0)
+#writer_black.printstring("30°C")
+#e.display_frame(buf_black, buf_red)
 
 
-e.display_frame(buf_black,None)
+#test of generating text
 
-for row in range(0,8):
-	fb_red.text("temperatura",0,row*16,black)
+def draw_char(fb, x, y, char, c, scale=1):
+    char_coords = {
+        'A': [(0, 30), (5, 10), (10, 0), (15, 10), (20, 30), (17, 25), (13, 15), (7, 15), (3, 25), (0, 30)],
+        'B': [(0, 0), (0, 30), (10, 30), (15, 25), (15, 20), (10, 15), (15, 10), (15, 5), (10, 0), (0, 0)],
+        'C': [(20, 0), (0, 0), (0, 30), (20, 30)],
+        'D': [(0, 0), (0, 30), (10, 30), (15, 25), (15, 5), (10, 0), (0, 0)],
+        'E': [(20, 0), (0, 0), (0, 30), (20, 30), (0, 15), (15, 15)],
+        'F': [(20, 0), (0, 0), (0, 30), (20, 30), (0, 15)],
+        # Można dodać więcej znaków
+    }
+    scaled_coords = [(int(xx * scale), int(yy * scale)) for xx, yy in char_coords.get(char, [])]
+    
+    flat_coords = bytearray()
+    for coord in scaled_coords:
+        flat_coords.append(coord[0])
+        flat_coords.append(coord[1])
+        
+    fb.poly(x, y, flat_coords, c)
 
-for row in range(0,8):
-	fb_black.text("temperatura",0,row*16,black)
+def text(fb, x, y, text, c=1, scale=1):
+    char_width = 20 * scale  # Szerokość pojedynczego znaku
+    char_height = 30 * scale  # Wysokość pojedynczego znaku
+    
+    current_x = x
+    current_y = y
+    
+    for char in text:
+        if char == '\n':  # Nowa linia
+            current_x = x
+            current_y += char_height
+            continue
+        
+        draw_char(fb, current_x, current_y, char, c, scale)
+        
+        current_x += char_width  # Przesunięcie do następnego znaku
 
-print("diplaying frame")
-e.display_frame(buf_black, buf_red)
-print("displaying frame end")
 
-#e.sleep()
-print("test, 0-1 0-1, PT OFF")
-e.partial_refresh(100,200,0,1,0)
-# --------------------
-print("test, 0-1 0-1, PT ON")
-e.partial_refresh(0,100,0,100,1)
+#todo - write general function which will handle white/red/black display relation
+
+def dev_color_handling_rect(x, y, width, height, color_name, fill):
+    
+    if color_name == 'red':
+        fb_red.rect(x, y, width, height, red, fill)
+		
+    if color_name == 'black':
+        fb_red.rect(x, y, width, height, white, fill)  # fill red with white - to turn off overlapping
+        fb_black.rect(x, y, width, height, black, fill)
+		
+    if color_name == 'white':
+        fb_black.rect(x, y, width, height, white, fill)
+        fb_red.rect(x, y, width, height, fill)
+    
+
+#text(fb_black, 200, 100, "ABDC", black, scale=2)
+
+#draw a demo cat
+
+#you can always overlay graphic - from simple triangles to something complicated    
+
+#fb_black.ellipse(200,170, 100, 100, black, True) #head
+#fb_red.ellipse(200,170, 20, 20, black, True) #nose
+
+
+
+
+    #def blit(self, fbuf, x, y, transparent=False):
+     #   for py in range(fbuf.height):
+      #      for px in range(fbuf.width):
+       #         if not transparent or fbuf.pixel(px, py) != 0:
+        #            self.pixel(x + px, y + py, fbuf.pixel(px, py))
+
+    # Other methods can be added similarly
+
+# Example usage:
+# black_buf and red_buf are instances of framebuf for black and red colors
+# width and height represent the dimensions of the display
+
+from ThreeColorFrameBuffer import ThreeColorFrameBuffer
+
+frame_buffer_eink = ThreeColorFrameBuffer(400, 300, fb_black, fb_red)
+
+#frame_buffer_eink.rect(0,0, 200, 150, "red")
