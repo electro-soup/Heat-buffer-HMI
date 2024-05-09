@@ -43,16 +43,10 @@ def sub_cb(topic, msg, retained):
              print(sensors, values)
              if 'temp' in sensors:
                   temperatures_dict[sensors]=int(values)
-         ram_offset = 0  
-         for temp_sens, values in sorted(temperatures_dict.items()):
+     
+         #for temp_sens, values in sorted(temperatures_dict.items()):
     
              
-            
-
-     
-
-        
-
 # Demonstrate scheduler is operational.
 async def heartbeat():
     s = True

@@ -6,7 +6,6 @@
 import epaper4in2
 from machine import Pin, SPI
 
-
 # SPIV on ESP32
 #VCC - GREY
 #GND - BROWN
@@ -49,8 +48,6 @@ def clear_screen():
 
 clear_screen()
 
-
-
 black = 0
 white = 1
 
@@ -73,10 +70,6 @@ def text_wrap(str,x,y,color,w,h,border=None):
 		if j >= h:
 			break
 
-
-
-
-
 # draw text box 3
 bx = 0
 by = 184
@@ -84,74 +77,138 @@ bw = w//2 # 64 = 8 cols
 bh = 8 * 8 # 64 = 8 rows (64 chars in total)
 text_wrap(str,bx,by,black,bw,bh,None)
 
-fb_black.fill(white)
-fb_red.fill(white)
-#e.display_frame(buf_black,buf_black)
-
-
-#dev function		
-
-
-
-
-
-
-
 
 from ThreeColorFrameBuffer import ThreeColorFrameBuffer
 
 framebuffer = ThreeColorFrameBuffer(400, 300, fb_black, fb_red)
 
 #frame_buffer_eink.rect(0,0, 200, 150, "red")
-width, height = 400, 300
 
-def calculate_max_depth_and_size(width, height, min_size):
-    depth = 0
-    size = min(width, height)
-    while size % 3 == 0 and size // 3 >= min_size:
-        size //= 3
-        depth += 1
-    size *= 3**depth  # Powrót do pełnej wielkości dywanu
-    return depth, size
-
-def draw_sierpinski_carpet(framebuffer, x, y, size, depth, max_depth):
-    if depth > max_depth or size < 5:
-        return
-
-    new_size = size // 3
-
-    # Tylko dwa kolory używane do rysowania kwadratów (biały i czerwony), tło jest czarne
-    color = ['red', 'white']
-    color_name = color[depth % 2]  # Przełączanie między czerwonym a białym
-
-    # Rysuj środkowy kwadrat
-    framebuffer.rect(x + new_size, y + new_size, new_size, new_size, color_name, fill=True)
-
-    if new_size >= 5:
-        for i in range(3):
-            for j in range(3):
-                # Pomiń rysowanie środkowego kwadratu
-                if i == 1 and j == 1:
-                    continue
-                draw_sierpinski_carpet(framebuffer, x + i * new_size, y + j * new_size, new_size, depth + 1, max_depth)
-
-# Ustawienie początkowe całego ekranu na czarne tło
-framebuffer.fill('black')
-
-# Obliczanie głębokości rekursji i maksymalnego rozmiaru
-max_depth, full_size = calculate_max_depth_and_size(width, height, 5)
-
-# Ustawienie pozycji początkowej, aby dywan był wyśrodkowany
-start_x = (width - full_size) // 2
-start_y = (height - full_size) // 2
-
-
-# Rozpocznij rysowanie dywanu
-draw_sierpinski_carpet(framebuffer, start_x, start_y, full_size, 5, 7) 
 e.display_frame(buf_black,buf_red)
+
+def frame_update():
+    e.display_frame(buf_black,buf_red)
+     
+clear_screen()
+
 
 #how to handle arrays 
 #import array
 #myData = array.array('I', [10,10,120,30,30,61])
 
 
+#for quick demo version - clean.py is copied here
+# clean.py Test of asynchronous mqtt client with clean session.
+# (C) Copyright Peter Hinch 2017-2019.
+# Released under the MIT licence.
+
+# Public brokers https://github.com/mqtt/mqtt.github.io/wiki/public_brokers
+
+# The use of clean_session means that after a connection failure subscriptions
+# must be renewed (MQTT spec 3.1.2.4). This is done by the connect handler.
+# Note that publications issued during the outage will be missed. If this is
+# an issue see unclean.py.
+
+# red LED: ON == WiFi fail
+# blue LED heartbeat: demonstrates scheduler is running.
+
+from mqtt_as import MQTTClient
+from mqtt_local import wifi_led, blue_led, config
+import uasyncio as asyncio
+import json
+import struct
+
+outages = 0
+temp = []
+
+
+# Subscription callback
+def sub_cb(topic, msg, retained):
+    temp_dict = {}
+    print(f'Topic: "{topic.decode()}" Message: "{msg.decode()}" Retained: {retained}')
+    print(topic.decode())
+   
+    if topic.decode() == 'home/kotlownia/bufor':
+        temp_msg = msg.decode()
+        temp_dict = json.loads(temp_msg)
+        print(temp_dict)
+        
+        temperatures_dict = {}
+        
+        for sensors, values in sorted(temp_dict.items()):
+            print(sensors, values)
+            if 'temp' in sensors:
+                temperatures_dict[sensors]=int(values)
+                  
+        i = 0
+        for temp_sens, values in sorted(temperatures_dict.items()):
+            framebuffer.text(f'temperature: {values}', 0, i, 'black')
+            i = i + 10
+            
+        frame_update()
+
+       
+# Demonstrate scheduler is operational.
+async def heartbeat():
+    s = True
+    while True:
+        await asyncio.sleep_ms(500)
+        blue_led(s)
+        s = not s
+
+async def wifi_han(state):
+    global outages
+    wifi_led(not state)
+    if state:
+        print('WiFi is up.')
+    else:
+        outages += 1
+        print('WiFi is down.')
+    await asyncio.sleep(1)
+    
+# If you connect with clean_session True, must re-subscribe (MQTT spec 3.1.2.4)
+async def conn_han(client):
+    await client.subscribe('foo_topic', 1)
+
+async def main(client):
+    while not client.isconnected():
+        await client.connect()
+        print("attempt to connext")
+        
+
+
+    n = 0
+    await client.subscribe('home/kotlownia/bufor', 0)
+    #await client.subscribe('home/OMG_ESP32_BLE/BTtoMQTT/A4C138F53164', 0)
+    #await client.subscribe('home/OMG_ESP32_BLE/BTtoMQTT/A4C138D1110F', 0)
+    #await client.subscribe('home/OMG_ESP32_BLE/BTtoMQTT/A4C138425C0D', 0)
+    #await client.subscribe('home/OMG_ESP32_BLE/BTtoMQTT/A4C138250A06', 0)
+    
+    while True:
+        await asyncio.sleep(5)
+        print('publish', n)
+        # If WiFi is down the following will pause for the duration.
+        await client.publish('result', '{} repubs: {} outages: {}'.format(n, client.REPUB_COUNT, outages), qos = 1)
+        n += 1
+        await client.wait_msg()
+        await client._keep_connected()
+        
+
+# Define configuration
+config['subs_cb'] = sub_cb
+config['wifi_coro'] = wifi_han
+#config['connect_coro'] = conn_han
+config['clean'] = False
+config['will'] = ('result', 'Goodbye cruel world', False, 0 )
+config['keepalive'] = 120
+
+# Set up client
+MQTTClient.DEBUG = True  # Optional
+client = MQTTClient(config)
+
+asyncio.create_task(heartbeat())
+try:
+    asyncio.run(main(client))
+finally:
+    client.close()  # Prevent LmacRxBlk:1 errors
+    asyncio.new_event_loop()
