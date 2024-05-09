@@ -212,3 +212,5 @@ class EPD:
         self._command(VCOM_AND_DATA_INTERVAL_SETTING, bytearray_to_bytes(data_to_send))
         print(bytearray_to_bytes(data_to_send))
         self.wait_until_idle()
+    
+    
