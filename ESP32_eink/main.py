@@ -46,7 +46,7 @@ def clear_screen():
 	fb_black.fill(white)
 	e.display_frame(buf_black, buf_red)
 
-clear_screen()
+#clear_screen()
 
 black = 0
 white = 1
@@ -75,7 +75,7 @@ bx = 0
 by = 184
 bw = w//2 # 64 = 8 cols
 bh = 8 * 8 # 64 = 8 rows (64 chars in total)
-text_wrap(str,bx,by,black,bw,bh,None)
+#text_wrap(str,bx,by,black,bw,bh,None)
 
 
 from ThreeColorFrameBuffer import ThreeColorFrameBuffer
@@ -84,7 +84,7 @@ framebuffer = ThreeColorFrameBuffer(400, 300, fb_black, fb_red)
 
 #frame_buffer_eink.rect(0,0, 200, 150, "red")
 
-e.display_frame(buf_black,buf_red)
+
 
 def frame_update():
     e.display_frame(buf_black,buf_red)
@@ -139,13 +139,31 @@ def sub_cb(topic, msg, retained):
             print(sensors, values)
             if 'temp' in sensors:
                 temperatures_dict[sensors]=int(values)
-                  
+
+        framebuffer.fill('white')          
         i = 0
+        lower_tempC = 30
+        x, y = 20, 20
         for temp_sens, values in sorted(temperatures_dict.items()):
-            framebuffer.text(f'temperature: {values}', 0, i, 'black')
-            i = i + 10
-            
-        frame_update()
+            if i%20 == 0:
+                framebuffer.text(f'{temp_sens}: {values}C', x, y + i, 'black')
+                framebuffer.rect(x + 100, y + i, 60, 25, 'black', False)
+                framebuffer.rect(x + 101,y+i+1,values - lower_tempC,23,'red', True )
+            else:
+                framebuffer.text(f'{temp_sens}: {values}C', x, y + i, 'red')
+                framebuffer.rect(x + 100, y + i, 60, 25, 'black', False)
+                framebuffer.rect(x + 101,y+i+1,values - lower_tempC,23,'red', True )
+            i = i + 30
+        # percent load bar
+        percent_value = int(temp_dict['load_percent'])
+        actual_power = int(temp_dict['power'])
+        
+        rest_x = 250
+        framebuffer.rect(rest_x, 99, 30, 102, 'black', False)
+        framebuffer.rect(rest_x+1, 100 + 100 - percent_value, 28, percent_value, 'red', True)
+        framebuffer.text( f'procent:{percent_value}%', rest_x, 220, 'black')
+        framebuffer.text( f'moc:{actual_power}W', rest_x, 230, 'red')    
+        #frame_update()
 
        
 # Demonstrate scheduler is operational.
@@ -170,13 +188,24 @@ async def wifi_han(state):
 async def conn_han(client):
     await client.subscribe('foo_topic', 1)
 
+async def frame_update_async():
+     while True:
+          e.reset()
+          e.init()
+          frame_update()
+          e.sleep
+          await asyncio.sleep(60)
+
 async def main(client):
-    while not client.isconnected():
+    try:
         await client.connect()
-        print("attempt to connext")
         
-
-
+    except OSError:
+        print('Connection failed.')
+        import machine
+        machine.reset()
+        print("ESP32 reset")
+   
     n = 0
     await client.subscribe('home/kotlownia/bufor', 0)
     #await client.subscribe('home/OMG_ESP32_BLE/BTtoMQTT/A4C138F53164', 0)
@@ -192,6 +221,7 @@ async def main(client):
         n += 1
         await client.wait_msg()
         await client._keep_connected()
+        #await frame_update_async()
         
 
 # Define configuration
@@ -207,6 +237,7 @@ MQTTClient.DEBUG = True  # Optional
 client = MQTTClient(config)
 
 asyncio.create_task(heartbeat())
+asyncio.create_task(frame_update_async())
 try:
     asyncio.run(main(client))
 finally:
