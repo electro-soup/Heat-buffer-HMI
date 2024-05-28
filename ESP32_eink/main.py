@@ -121,6 +121,11 @@ import struct
 outages = 0
 temp = []
 
+import time
+
+  
+    
+    
 
 # Subscription callback
 def sub_cb(topic, msg, retained):
@@ -192,9 +197,12 @@ async def frame_update_async():
      while True:
           e.reset()
           e.init()
+          current_time = time.localtime()
+          formatted_time = "{:02}:{:02}:{:02}".format(current_time[3], current_time[4], current_time[5])
+          framebuffer.text(formatted_time, 200, 270,'red')
           frame_update()
-          e.sleep
-          await asyncio.sleep(60)
+          e.sleep()
+          await asyncio.sleep(60*5)
 
 async def main(client):
     try:
