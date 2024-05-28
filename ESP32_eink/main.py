@@ -124,11 +124,47 @@ temp = []
 import time
 
   
-    
+def buffer_indicator(buffer_dict):
+        
+        temperatures_dict = {}
+
+        for sensors, values in sorted(buffer_dict.items()):
+            print(sensors, values)
+            if 'temp' in sensors:
+                temperatures_dict[sensors]=int(values)
+
+        i = 0
+        lower_tempC = 30
+        x, y = 20, 20
+        for temp_sens, values in sorted(temperatures_dict.items()):
+            if i%20 == 0:
+                framebuffer.text(f'{values}C', x, y + i, 'black')
+                framebuffer.rect(x + 100, y + i, 60, 25, 'black', False)
+                framebuffer.rect(x + 101,y+i+1,values - lower_tempC,23,'red', True )
+            else:
+                framebuffer.text(f'{values}C', x, y + i, 'red')
+                framebuffer.rect(x + 100, y + i, 60, 25, 'black', False)
+                framebuffer.rect(x + 101,y+i+1,values - lower_tempC,23,'red', True )
+            i = i + 30
+        
+        
+        # percent load bar
+        percent_value = int(buffer_dict['load_percent'])
+        actual_power = int(buffer_dict['power'])
+        
+        rest_x = 250
+        framebuffer.rect(rest_x, 99, 30, 102, 'black', False)
+        framebuffer.rect(rest_x+1, 100 + 100 - percent_value, 28, percent_value, 'red', True)
+        framebuffer.text( f'procent:{percent_value}%', rest_x, 220, 'black')
+        framebuffer.text( f'moc:{actual_power}W', rest_x, 230, 'red')    
+        #frame_update()
+     
+counter = 0
     
 
 # Subscription callback
 def sub_cb(topic, msg, retained):
+    global counter
     temp_dict = {}
     print(f'Topic: "{topic.decode()}" Message: "{msg.decode()}" Retained: {retained}')
     print(topic.decode())
@@ -137,39 +173,14 @@ def sub_cb(topic, msg, retained):
         temp_msg = msg.decode()
         temp_dict = json.loads(temp_msg)
         print(temp_dict)
-        
-        temperatures_dict = {}
-        
-        for sensors, values in sorted(temp_dict.items()):
-            print(sensors, values)
-            if 'temp' in sensors:
-                temperatures_dict[sensors]=int(values)
-
+    
         framebuffer.fill('white')          
-        i = 0
-        lower_tempC = 30
-        x, y = 20, 20
-        for temp_sens, values in sorted(temperatures_dict.items()):
-            if i%20 == 0:
-                framebuffer.text(f'{temp_sens}: {values}C', x, y + i, 'black')
-                framebuffer.rect(x + 100, y + i, 60, 25, 'black', False)
-                framebuffer.rect(x + 101,y+i+1,values - lower_tempC,23,'red', True )
-            else:
-                framebuffer.text(f'{temp_sens}: {values}C', x, y + i, 'red')
-                framebuffer.rect(x + 100, y + i, 60, 25, 'black', False)
-                framebuffer.rect(x + 101,y+i+1,values - lower_tempC,23,'red', True )
-            i = i + 30
-        # percent load bar
-        percent_value = int(temp_dict['load_percent'])
-        actual_power = int(temp_dict['power'])
+        buffer_indicator(temp_dict)
         
-        rest_x = 250
-        framebuffer.rect(rest_x, 99, 30, 102, 'black', False)
-        framebuffer.rect(rest_x+1, 100 + 100 - percent_value, 28, percent_value, 'red', True)
-        framebuffer.text( f'procent:{percent_value}%', rest_x, 220, 'black')
-        framebuffer.text( f'moc:{actual_power}W', rest_x, 230, 'red')    
-        #frame_update()
-
+        if counter == 0:
+             frame_update()
+             counter += 1
+        
        
 # Demonstrate scheduler is operational.
 async def heartbeat():
