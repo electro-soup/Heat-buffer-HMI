@@ -88,6 +88,7 @@ framebuffer = ThreeColorFrameBuffer(400, 300, fb_black, fb_red)
 
 def frame_update():
     e.display_frame(buf_black,buf_red)
+    print("frame update")
      
 clear_screen()
 
@@ -125,39 +126,54 @@ import time
 
   
 def buffer_indicator(buffer_dict):
-        
+       
         temperatures_dict = {}
 
         for sensors, values in sorted(buffer_dict.items()):
             print(sensors, values)
             if 'temp' in sensors:
                 temperatures_dict[sensors]=int(values)
+        
+        screen_width = 400
+        screen_height = 300
+        
+        screen_horizontal_middle = screen_width/2
 
         i = 0
         lower_tempC = 30
-        x, y = 20, 20
-        for temp_sens, values in sorted(temperatures_dict.items()):
-            if i%20 == 0:
-                framebuffer.text(f'{values}C', x, y + i, 'black')
-                framebuffer.rect(x + 100, y + i, 60, 25, 'black', False)
-                framebuffer.rect(x + 101,y+i+1,values - lower_tempC,23,'red', True )
-            else:
-                framebuffer.text(f'{values}C', x, y + i, 'red')
-                framebuffer.rect(x + 100, y + i, 60, 25, 'black', False)
-                framebuffer.rect(x + 101,y+i+1,values - lower_tempC,23,'red', True )
-            i = i + 30
+        upper_tempC = 90
+        delta_tempC = upper_tempC - lower_tempC
         
+        buffer_tempbar_width = 100
+        buffer_tempbar_height = 15
+        
+        buffer_x, buffer_y = int(screen_horizontal_middle - buffer_tempbar_width/2), 20
+        #printing temperature values and creating temperature bars
+        for temp_sens, value in sorted(temperatures_dict.items()):
+            
+            framebuffer.text(f'{value}C', buffer_x-30, buffer_y + int(buffer_tempbar_height/2) -3 + i, 'black')
+            
+            framebuffer.rect(buffer_x + 1,buffer_y+i+1, int(((value - lower_tempC)/delta_tempC)*buffer_tempbar_width), buffer_tempbar_height - 1,'red', True )
+            
+            i = i + buffer_tempbar_height
+        framebuffer.rect(buffer_x, buffer_y, buffer_tempbar_width, i, 'black', False) #make one big black rectangle
         
         # percent load bar
         percent_value = int(buffer_dict['load_percent'])
         actual_power = int(buffer_dict['power'])
         
-        rest_x = 250
-        framebuffer.rect(rest_x, 99, 30, 102, 'black', False)
-        framebuffer.rect(rest_x+1, 100 + 100 - percent_value, 28, percent_value, 'red', True)
-        framebuffer.text( f'procent:{percent_value}%', rest_x, 220, 'black')
-        framebuffer.text( f'moc:{actual_power}W', rest_x, 230, 'red')    
-        #frame_update()
+        screen_margin_y = 10
+        bar_width = 150
+        bar_height = 60
+        load_buffer_x_pos = int(screen_horizontal_middle - bar_width/2)
+        load_bufer_y_pos = 210
+        load_bufer_y_pos = load_bufer_y_pos - screen_margin_y
+
+        framebuffer.rect(load_buffer_x_pos, load_bufer_y_pos, bar_width, bar_height, 'black', False) #black frame
+        framebuffer.rect(load_buffer_x_pos+1, load_bufer_y_pos +1, int(bar_width * (percent_value/100)), bar_height-1, 'red', True)
+        framebuffer.text( f'procent:{percent_value}%', 300, 220, 'black')
+        framebuffer.text( f'moc:{actual_power}W', 300, 230, 'red')    
+      
      
 counter = 0
     
@@ -176,12 +192,20 @@ def sub_cb(topic, msg, retained):
     
         framebuffer.fill('white')          
         buffer_indicator(temp_dict)
-        
+        print(counter)
         if counter == 0:
-             frame_update()
+             asyncio.create_task(frame_first_update())
              counter += 1
         
-       
+async def frame_first_update():
+     e.reset()
+     e.init()
+     current_time = time.localtime()
+     formatted_time = "{:02}:{:02}:{:02}".format(current_time[3], current_time[4], current_time[5])
+     framebuffer.text(formatted_time, 300, 270,'red')
+     frame_update()
+     e.sleep()
+
 # Demonstrate scheduler is operational.
 async def heartbeat():
     s = True
