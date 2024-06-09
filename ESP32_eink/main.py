@@ -87,7 +87,6 @@ def frame_update():
     e.display_frame(buf_black,buf_red)
     print("frame update")
      
-clear_screen()
 
 
 #how to handle arrays 
@@ -137,9 +136,7 @@ class NotionalDisplay(framebuf.FrameBuffer):
 my_text_display = NotionalDisplay(400, 300, buf_black)
 my_text_display_red = NotionalDisplay(400, 300,buf_red)
 wri = Writer(my_text_display, buffer_font)
-#wri_red = Writer(my_text_display_red, buffer_font) #quick workaround to get black on red
-Writer.set_textpos(my_text_display, 225, 150)  # verbose = False to suppress console output
-#Writer.set_textpos(my_text_display_red,235,170)
+
 
 
 
@@ -197,12 +194,12 @@ def buffer_indicator(buffer_dict):
         framebuffer.text( f'procent:{percent_value}%', 300, 220, 'black')
         framebuffer.text( f'moc:{actual_power}W', 300, 230, 'red')    
 
-        #wri.printstring(f'{percent_value}%\n', True) #showing bigger font for percent value -> but now disrupts all from whatever reason
+        #big fonted percent value 
+        writer_row_pos = 225
+        writer_col_pos = 160 
+        Writer.set_textpos(my_text_display, writer_row_pos, writer_col_pos)
         wri.printstring(f'{percent_value}%', True)
-        #wri_red.printstring(f'{percent_value}%') # %% is causing wwifi crash :O probably because it reads not existing chars
-        
-        Writer.set_textpos(my_text_display, 225, 150)  # reset position, first argument - y position (rows), second - columns (x)
-        #Writer.set_textpos(my_text_display_red,235,170)
+     
      
 counter = 0
     
@@ -257,8 +254,11 @@ async def wifi_han(state):
 async def conn_han(client):
     await client.subscribe('foo_topic', 1)
 
+
+
 async def frame_update_async():
      while True:
+          await asyncio.sleep(60*5)
           e.reset()
           e.init()
           current_time = time.localtime()
@@ -266,7 +266,14 @@ async def frame_update_async():
           framebuffer.text(formatted_time, 300, 270,'red')
           frame_update()
           e.sleep()
-          await asyncio.sleep(60*5)
+
+#temp function to reset system if there is no proper error handling coded
+async def reset_system():
+     import machine
+     while True:
+          await asyncio.sleep(60*60*6) # perform reset after 6 hours
+          machine.reset()
+          
 
 async def main(client):
     try:
@@ -293,7 +300,7 @@ async def main(client):
         n += 1
         await client.wait_msg()
         await client._keep_connected()
-        #await frame_update_async()
+        
         
 
 # Define configuration
@@ -308,8 +315,11 @@ config['keepalive'] = 120
 MQTTClient.DEBUG = True  # Optional
 client = MQTTClient(config)
 
+asyncio.create_task(reset_system())
 asyncio.create_task(heartbeat())
 asyncio.create_task(frame_update_async())
+
+
 try:
     asyncio.run(main(client))
 finally:
