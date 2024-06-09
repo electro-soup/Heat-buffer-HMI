@@ -81,8 +81,6 @@ from ThreeColorFrameBuffer import ThreeColorFrameBuffer
 
 framebuffer = ThreeColorFrameBuffer(400, 300, fb_black, fb_red)
 
-#frame_buffer_eink.rect(0,0, 200, 150, "red")
-
 
 
 def frame_update():
@@ -124,7 +122,7 @@ temp = []
 import time
 
 from writer import Writer
-import out_font
+import buffer_font
 #getting bigger font using Writer class and some code from the internet
 class NotionalDisplay(framebuf.FrameBuffer):
     def __init__(self, width, height,buffer):
@@ -138,10 +136,10 @@ class NotionalDisplay(framebuf.FrameBuffer):
 
 my_text_display = NotionalDisplay(400, 300, buf_black)
 my_text_display_red = NotionalDisplay(400, 300,buf_red)
-wri = Writer(my_text_display, out_font)
-wri_red = Writer(my_text_display_red, out_font) #quick workaround to get black on red
-Writer.set_textpos(my_text_display, 235, 170)  # verbose = False to suppress console output
-Writer.set_textpos(my_text_display_red,235,170)
+wri = Writer(my_text_display, buffer_font)
+#wri_red = Writer(my_text_display_red, buffer_font) #quick workaround to get black on red
+Writer.set_textpos(my_text_display, 225, 150)  # verbose = False to suppress console output
+#Writer.set_textpos(my_text_display_red,235,170)
 
 
 
@@ -186,10 +184,10 @@ def buffer_indicator(buffer_dict):
         
         screen_margin_y = 10
         bar_width = 150
-        bar_height = 60
+        bar_height = 30
         load_buffer_x_pos = int(screen_horizontal_middle - bar_width/2)
-        load_bufer_y_pos = 230
-        load_bufer_y_pos = load_bufer_y_pos - screen_margin_y
+        load_bufer_y_pos = 260
+        load_bufer_y_pos = load_bufer_y_pos
 
         bar_thickness = 3
         for layer in range(bar_thickness):
@@ -200,9 +198,11 @@ def buffer_indicator(buffer_dict):
         framebuffer.text( f'moc:{actual_power}W', 300, 230, 'red')    
 
         #wri.printstring(f'{percent_value}%\n', True) #showing bigger font for percent value -> but now disrupts all from whatever reason
-        wri.printstring(f'{percent_value}', True)
-        wri_red.printstring(f'{percent_value}') # %% is causing wwifi crash :O probably because it reads not existing chars
-    
+        wri.printstring(f'{percent_value}%', True)
+        #wri_red.printstring(f'{percent_value}%') # %% is causing wwifi crash :O probably because it reads not existing chars
+        
+        Writer.set_textpos(my_text_display, 225, 150)  # reset position, first argument - y position (rows), second - columns (x)
+        #Writer.set_textpos(my_text_display_red,235,170)
      
 counter = 0
     
@@ -224,7 +224,7 @@ def sub_cb(topic, msg, retained):
         print(counter)
         if counter == 0:
              asyncio.create_task(frame_first_update())
-             counter += 1
+        counter += 1
         
 async def frame_first_update():
      e.reset()
