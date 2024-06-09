@@ -46,7 +46,6 @@ def clear_screen():
 	fb_black.fill(white)
 	e.display_frame(buf_black, buf_red)
 
-#clear_screen()
 
 black = 0
 white = 1
@@ -124,6 +123,28 @@ temp = []
 
 import time
 
+from writer import Writer
+import out_font
+#getting bigger font using Writer class and some code from the internet
+class NotionalDisplay(framebuf.FrameBuffer):
+    def __init__(self, width, height,buffer):
+        self.width = width
+        self.height = height
+        self.buffer = buffer
+        self.mode = framebuf.MONO_HLSB
+        super().__init__(self.buffer, self.width, self.height, self.mode)
+    def show():
+        ...
+
+my_text_display = NotionalDisplay(400, 300, buf_black)
+my_text_display_red = NotionalDisplay(400, 300,buf_red)
+wri = Writer(my_text_display, out_font)
+wri_red = Writer(my_text_display_red, out_font) #quick workaround to get black on red
+Writer.set_textpos(my_text_display, 235, 170)  # verbose = False to suppress console output
+Writer.set_textpos(my_text_display_red,235,170)
+
+
+
   
 def buffer_indicator(buffer_dict):
        
@@ -145,18 +166,19 @@ def buffer_indicator(buffer_dict):
         delta_tempC = upper_tempC - lower_tempC
         
         buffer_tempbar_width = 100
-        buffer_tempbar_height = 15
+        buffer_tempbar_height = 18
         
         buffer_x, buffer_y = int(screen_horizontal_middle - buffer_tempbar_width/2), 20
         #printing temperature values and creating temperature bars
         for temp_sens, value in sorted(temperatures_dict.items()):
             
             framebuffer.text(f'{value}C', buffer_x-30, buffer_y + int(buffer_tempbar_height/2) -3 + i, 'black')
-            
             framebuffer.rect(buffer_x + 1,buffer_y+i+1, int(((value - lower_tempC)/delta_tempC)*buffer_tempbar_width), buffer_tempbar_height - 1,'red', True )
-            
             i = i + buffer_tempbar_height
-        framebuffer.rect(buffer_x, buffer_y, buffer_tempbar_width, i, 'black', False) #make one big black rectangle
+
+        bar_thickness = 2
+        for layer in range(bar_thickness):    
+            framebuffer.rect(buffer_x - layer, buffer_y - layer, buffer_tempbar_width + 2*layer, i+2*layer, 'black', False) #make one big black rectangle
         
         # percent load bar
         percent_value = int(buffer_dict['load_percent'])
@@ -166,14 +188,21 @@ def buffer_indicator(buffer_dict):
         bar_width = 150
         bar_height = 60
         load_buffer_x_pos = int(screen_horizontal_middle - bar_width/2)
-        load_bufer_y_pos = 210
+        load_bufer_y_pos = 230
         load_bufer_y_pos = load_bufer_y_pos - screen_margin_y
 
-        framebuffer.rect(load_buffer_x_pos, load_bufer_y_pos, bar_width, bar_height, 'black', False) #black frame
-        framebuffer.rect(load_buffer_x_pos+1, load_bufer_y_pos +1, int(bar_width * (percent_value/100)), bar_height-1, 'red', True)
+        bar_thickness = 3
+        for layer in range(bar_thickness):
+            framebuffer.rect(load_buffer_x_pos-layer, load_bufer_y_pos-layer, bar_width+layer*2, bar_height+layer*2, 'black', False) #black frame #1
+
+        framebuffer.rect(load_buffer_x_pos+1, load_bufer_y_pos+1, int(bar_width * (percent_value/100)), bar_height-2, 'red', True)
         framebuffer.text( f'procent:{percent_value}%', 300, 220, 'black')
         framebuffer.text( f'moc:{actual_power}W', 300, 230, 'red')    
-      
+
+        #wri.printstring(f'{percent_value}%\n', True) #showing bigger font for percent value -> but now disrupts all from whatever reason
+        wri.printstring(f'{percent_value}', True)
+        wri_red.printstring(f'{percent_value}') # %% is causing wwifi crash :O probably because it reads not existing chars
+    
      
 counter = 0
     
@@ -234,7 +263,7 @@ async def frame_update_async():
           e.init()
           current_time = time.localtime()
           formatted_time = "{:02}:{:02}:{:02}".format(current_time[3], current_time[4], current_time[5])
-          framebuffer.text(formatted_time, 200, 270,'red')
+          framebuffer.text(formatted_time, 300, 270,'red')
           frame_update()
           e.sleep()
           await asyncio.sleep(60*5)
