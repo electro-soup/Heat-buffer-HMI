@@ -121,7 +121,9 @@ temp = []
 import time
 
 from writer import Writer
-import buffer_font
+import font42_bufferload
+import font12_temperature
+import font15_testall
 #getting bigger font using Writer class and some code from the internet
 class NotionalDisplay(framebuf.FrameBuffer):
     def __init__(self, width, height,buffer):
@@ -135,16 +137,19 @@ class NotionalDisplay(framebuf.FrameBuffer):
 
 my_text_display = NotionalDisplay(400, 300, buf_black)
 my_text_display_red = NotionalDisplay(400, 300,buf_red)
-wri = Writer(my_text_display, buffer_font)
-
-
+wri = Writer(my_text_display, font42_bufferload)
+writer_temperatures = Writer(my_text_display, font12_temperature)
+test_writer = Writer(my_text_display, font15_testall)
+writer_red_power = Writer(my_text_display_red, font15_testall)
 
 
   
 def buffer_indicator(buffer_dict):
        
         temperatures_dict = {}
-
+       # test_writer.set_textpos(my_text_display, 4, 4)
+       # test_writer.printstring("!%()*+,-./0123456789:\n;<=>?@ABCDEFGHI\nJKLMNOPQRSTUVW \n XYZ[\]^_`abcd\nefghijklmnopqr\nstuvwxyz{|}°\nąężźćó\nĄĘŻŹĆÓ", True)
+        
         for sensors, values in sorted(buffer_dict.items()):
             print(sensors, values)
             if 'temp' in sensors:
@@ -170,11 +175,17 @@ def buffer_indicator(buffer_dict):
             framebuffer.text(f'{value}C', buffer_x-30, buffer_y + int(buffer_tempbar_height/2) -3 + i, 'black')
             framebuffer.rect(buffer_x + 1,buffer_y+i+1, int(((value - lower_tempC)/delta_tempC)*buffer_tempbar_width), buffer_tempbar_height - 1,'red', True )
             i = i + buffer_tempbar_height
+            
+            #test - using writer class to show temperatures (works fine)
+            writer_temperatures.set_textpos(my_text_display, i+5, 260)
+            writer_temperatures.printstring(f'{value}°C',True)
 
         bar_thickness = 2
         for layer in range(bar_thickness):    
             framebuffer.rect(buffer_x - layer, buffer_y - layer, buffer_tempbar_width + 2*layer, i+2*layer, 'black', False) #make one big black rectangle
         
+
+
         # percent load bar
         percent_value = int(buffer_dict['load_percent'])
         actual_power = int(buffer_dict['power'])
@@ -183,21 +194,36 @@ def buffer_indicator(buffer_dict):
         bar_width = 150
         bar_height = 30
         load_buffer_x_pos = int(screen_horizontal_middle - bar_width/2)
-        load_bufer_y_pos = 260
-        load_bufer_y_pos = load_bufer_y_pos
+        load_bufer_y_pos = 250
+        
 
         bar_thickness = 3
         for layer in range(bar_thickness):
             framebuffer.rect(load_buffer_x_pos-layer, load_bufer_y_pos-layer, bar_width+layer*2, bar_height+layer*2, 'black', False) #black frame #1
-
-        framebuffer.rect(load_buffer_x_pos+1, load_bufer_y_pos+1, int(bar_width * (percent_value/100)), bar_height-2, 'red', True)
+        red_bar_width = int(bar_width * (percent_value/100))
+        framebuffer.rect(load_buffer_x_pos+1, load_bufer_y_pos+1, red_bar_width, bar_height-2, 'red', True)
+        
+        #add some vertical line to buffer bar 
+        step = int(bar_width/10)
+        for factor in range(1,10):
+             color_str = ''
+             vline_pos = step * factor
+             if vline_pos < red_bar_width:
+                color = "white"
+             else:
+                color = "black"
+            
+             framebuffer.vline(load_buffer_x_pos + vline_pos, load_bufer_y_pos,bar_height, color)
+        
         framebuffer.text( f'procent:{percent_value}%', 300, 220, 'black')
         framebuffer.text( f'moc:{actual_power}W', 300, 230, 'red')    
-
+         
+        writer_red_power.set_textpos(my_text_display_red, 170, 300)
+        writer_red_power.printstring(f"moc: {actual_power}W",True) 
         #big fonted percent value 
-        writer_row_pos = 225
+        writer_row_pos = 195
         writer_col_pos = 160 
-        Writer.set_textpos(my_text_display, writer_row_pos, writer_col_pos)
+        wri.set_textpos(my_text_display, writer_row_pos, writer_col_pos)
         wri.printstring(f'{percent_value}%', True)
      
      
