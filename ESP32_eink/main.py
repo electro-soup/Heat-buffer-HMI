@@ -197,9 +197,13 @@ def buffer_indicator(buffer_dict):
         load_bufer_y_pos = 250
         
 
-        bar_thickness = 3
+        bar_thickness = 5
         for layer in range(bar_thickness):
             framebuffer.rect(load_buffer_x_pos-layer, load_bufer_y_pos-layer, bar_width+layer*2, bar_height+layer*2, 'black', False) #black frame #1
+        
+        for layer in range(bar_thickness-3):
+            framebuffer.rect(load_buffer_x_pos-layer, load_bufer_y_pos-layer, bar_width+layer*2, bar_height+layer*2, 'white', False) #black frame #1
+        
         red_bar_width = int(bar_width * (percent_value/100))
         framebuffer.rect(load_buffer_x_pos+1, load_bufer_y_pos+1, red_bar_width, bar_height-2, 'red', True)
         
@@ -212,9 +216,12 @@ def buffer_indicator(buffer_dict):
                 color = "white"
              else:
                 color = "black"
-            
-             framebuffer.vline(load_buffer_x_pos + vline_pos, load_bufer_y_pos,bar_height, color)
-        
+             
+             color = "white"
+             framebuffer.vline(load_buffer_x_pos + vline_pos-1, load_bufer_y_pos+1,bar_height, color)
+             framebuffer.vline(load_buffer_x_pos + vline_pos, load_bufer_y_pos+1,bar_height, color)
+             framebuffer.vline(load_buffer_x_pos + vline_pos+1, load_bufer_y_pos+1,bar_height, color)
+
         framebuffer.text( f'procent:{percent_value}%', 300, 220, 'black')
         framebuffer.text( f'moc:{actual_power}W', 300, 230, 'red')    
          
