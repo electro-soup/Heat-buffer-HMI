@@ -270,8 +270,8 @@ async def frame_update_async():
               
           print("async frame update")
           previous_meas_dict = global_dict_sensors
-
-          await asyncio.sleep(60*5)
+          minutes_to_wait = 10
+          await asyncio.sleep(60*minutes_to_wait)
           e.reset()
           e.init()
 
@@ -280,11 +280,13 @@ async def frame_update_async():
           for sensors, values in sorted(previous_meas_dict.items()):
             print(sensors, values)
             if 'temp' in sensors:
-                temperature_diff[sensors]=int(previous_meas_dict[sensors] - global_dict_sensors[sensors]) 
+                temp_difference = previous_meas_dict[sensors] - global_dict_sensors[sensors]
+                #print(f'{temp_difference}C diff')
+                temperature_diff[sensors]=int(temp_difference) 
           
           a = 'load_percent'
 
-          percent_diff = previous_meas_dict[a] - global_dict_sensors[a]
+          percent_diff = global_dict_sensors[a] - previous_meas_dict[a] 
 
           writer_temperatures_red = Writer(my_text_display_red, font12_temperature)
           
@@ -293,32 +295,48 @@ async def frame_update_async():
             
             if value < 0:
                 #delete red content - to be refactored in the future
-                writer_temperatures_red.set_textpos(my_text_display_red, 10 + i, 270)
-                writer_temperatures_red.printstring('    ',True)
+                writer_temperatures_red.set_textpos(my_text_display_red,  20 + i, 270)
+                writer_temperatures_red.printstring('',True)
 
-                writer_temperatures.set_textpos(my_text_display, 10 + i, 270)
+                writer_temperatures.set_textpos(my_text_display,  20 + i, 270)
                 writer_temperatures.printstring(f'-{value}°C',True)
-            else:
-                writer_temperatures.set_textpos(my_text_display, 10 + i, 270)
-                writer_temperatures.printstring('    ',True)
+            if value > 0:
+                writer_temperatures.set_textpos(my_text_display,  20 + i, 270)
+                writer_temperatures.printstring('',True)
 
-                writer_temperatures_red.set_textpos(my_text_display_red, 10 + i, 270)
+                writer_temperatures_red.set_textpos(my_text_display_red,  20 + i, 270)
                 writer_temperatures_red.printstring(f'+{value}°C',True)
             
-            i = i + 15
+            if value == 0: #do not display anything if 0
+                writer_temperatures.set_textpos(my_text_display,  20 + i, 270)
+                writer_temperatures.printstring('',True)
+
+                writer_temperatures_red.set_textpos(my_text_display_red,  20 + i, 270)
+                writer_temperatures_red.printstring('',True)
+            
+            i = i + 18
           
           if percent_diff < 0:
                 writer_temperatures_red.set_textpos(my_text_display_red, 200, 270)
-                writer_temperatures_red.printstring('    ',True)
+                writer_temperatures_red.printstring('',True)
 
                 writer_temperatures.set_textpos(my_text_display, 200, 270)
                 writer_temperatures.printstring(f'-{percent_diff}%',True)
-          else:
+         
+          if percent_diff > 0:
                 writer_temperatures.set_textpos(my_text_display, 200, 270)
-                writer_temperatures.printstring('    ',True)
+                writer_temperatures.printstring('',True)
 
                 writer_temperatures_red.set_textpos(my_text_display_red, 200, 270)
                 writer_temperatures_red.printstring(f'+{percent_diff}%',True)
+          
+          if percent_diff == 0:
+                writer_temperatures.set_textpos(my_text_display, 200, 270)
+                writer_temperatures.printstring('',True)
+
+                writer_temperatures_red.set_textpos(my_text_display_red, 200, 270)
+                writer_temperatures_red.printstring('',True)
+              
           
           current_time = time.localtime()
           formatted_time = "{:02}:{:02}:{:02}".format(current_time[3], current_time[4], current_time[5])
@@ -333,7 +351,27 @@ async def reset_system():
           await asyncio.sleep(60*60*6) # perform reset after 6 hours
           print("reset in the loop")
           machine.reset()
-          
+
+async def simple_watchdog():
+    
+    global counter
+    import machine
+    temp_counter = 0
+    while True:
+        
+        while counter == 0:
+            await asyncio.sleep(60) #wait 1 minute - if counter is 0 (no MQTT frames )
+            if counter == 0:
+                machine.reset()
+
+        temp_counter = counter
+
+        await asyncio.sleep(60*10)
+        if counter == temp_counter:
+            machine.reset() #if there is no new mqtt message - reset - but in the future it should be error handling (mqtt server maybe down etc)
+
+
+    
 
 async def main(client):
     try:
