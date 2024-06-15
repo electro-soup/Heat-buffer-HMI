@@ -111,7 +111,7 @@ wri = Writer(my_text_display, font42_bufferload)
 writer_temperatures = Writer(my_text_display, font12_temperature)
 test_writer = Writer(my_text_display, font15_testall)
 writer_red_power = Writer(my_text_display_red, font15_testall)
-
+writer_temperatures_red = Writer(my_text_display_red, font12_temperature)
   
 def buffer_indicator(buffer_dict):
         
@@ -193,7 +193,7 @@ def buffer_indicator(buffer_dict):
              framebuffer.vline(load_buffer_x_pos + vline_pos+1, load_bufer_y_pos+1,bar_height, color)
 
          
-        writer_red_power.set_textpos(my_text_display_red, 170, 300)
+        writer_red_power.set_textpos(my_text_display_red, 210, 300)
         writer_red_power.printstring(f"moc: {actual_power}W",True) 
         #big fonted percent value 
         writer_row_pos = 195
@@ -205,6 +205,7 @@ def buffer_indicator(buffer_dict):
 counter = 0
     
 global_dict_sensors = {}
+
 # Subscription callback
 def sub_cb(topic, msg, retained):
     global counter
@@ -267,76 +268,16 @@ async def frame_update_async():
           while (counter == 0):
               print("waiting for first mqtt frame ")
               await asyncio.sleep(1)
-              
+
+
           print("async frame update")
           previous_meas_dict = global_dict_sensors
-          minutes_to_wait = 10
+          minutes_to_wait = 1
           await asyncio.sleep(60*minutes_to_wait)
           e.reset()
           e.init()
-
-          temperature_diff = {} 
-          
-          for sensors, values in sorted(previous_meas_dict.items()):
-            print(sensors, values)
-            if 'temp' in sensors:
-                temp_difference = previous_meas_dict[sensors] - global_dict_sensors[sensors]
-                #print(f'{temp_difference}C diff')
-                temperature_diff[sensors]=int(temp_difference) 
-          
-          a = 'load_percent'
-
-          percent_diff = global_dict_sensors[a] - previous_meas_dict[a] 
-
-          writer_temperatures_red = Writer(my_text_display_red, font12_temperature)
-          
-          i = 0
-          for temperature, value in sorted(temperature_diff.items()):
-            
-            if value < 0:
-                #delete red content - to be refactored in the future
-                writer_temperatures_red.set_textpos(my_text_display_red,  20 + i, 270)
-                writer_temperatures_red.printstring('',True)
-
-                writer_temperatures.set_textpos(my_text_display,  20 + i, 270)
-                writer_temperatures.printstring(f'-{value}°C',True)
-            if value > 0:
-                writer_temperatures.set_textpos(my_text_display,  20 + i, 270)
-                writer_temperatures.printstring('',True)
-
-                writer_temperatures_red.set_textpos(my_text_display_red,  20 + i, 270)
-                writer_temperatures_red.printstring(f'+{value}°C',True)
-            
-            if value == 0: #do not display anything if 0
-                writer_temperatures.set_textpos(my_text_display,  20 + i, 270)
-                writer_temperatures.printstring('',True)
-
-                writer_temperatures_red.set_textpos(my_text_display_red,  20 + i, 270)
-                writer_temperatures_red.printstring('',True)
-            
-            i = i + 18
-          
-          if percent_diff < 0:
-                writer_temperatures_red.set_textpos(my_text_display_red, 200, 270)
-                writer_temperatures_red.printstring('',True)
-
-                writer_temperatures.set_textpos(my_text_display, 200, 270)
-                writer_temperatures.printstring(f'-{percent_diff}%',True)
-         
-          if percent_diff > 0:
-                writer_temperatures.set_textpos(my_text_display, 200, 270)
-                writer_temperatures.printstring('',True)
-
-                writer_temperatures_red.set_textpos(my_text_display_red, 200, 270)
-                writer_temperatures_red.printstring(f'+{percent_diff}%',True)
-          
-          if percent_diff == 0:
-                writer_temperatures.set_textpos(my_text_display, 200, 270)
-                writer_temperatures.printstring('',True)
-
-                writer_temperatures_red.set_textpos(my_text_display_red, 200, 270)
-                writer_temperatures_red.printstring('',True)
-              
+          show_temperature_and_load_difference(previous_meas_dict,global_dict_sensors)
+        
           
           current_time = time.localtime()
           formatted_time = "{:02}:{:02}:{:02}".format(current_time[3], current_time[4], current_time[5])
@@ -416,6 +357,7 @@ client = MQTTClient(config)
 asyncio.create_task(reset_system())
 asyncio.create_task(heartbeat())
 asyncio.create_task(frame_update_async())
+asyncio.create_task(simple_watchdog())
 
 
 try:
@@ -423,3 +365,91 @@ try:
 finally:
     client.close()  # Prevent LmacRxBlk:1 errors
     asyncio.new_event_loop()
+
+def show_temperature_and_load_difference(previous_meas_dict,global_dict_sensors):
+        
+          temperature_diff = {} 
+          
+          for sensors, values in sorted(previous_meas_dict.items()):
+            print(sensors, values)
+            if 'temp' in sensors:
+                temp_difference = global_dict_sensors[sensors] - previous_meas_dict[sensors]  
+                print(f'{temp_difference}C diff')
+                temperature_diff[sensors]=temp_difference 
+          
+          a = 'load_percent'
+
+          percent_diff = global_dict_sensors[a] - previous_meas_dict[a] 
+
+          
+          
+          i = 0
+          for temperature, value in sorted(temperature_diff.items()):
+            
+            if value < 0:
+                #delete red content - to be refactored in the future
+                writer_temperatures_red.set_textpos(my_text_display_red,  20 + i, 270)
+                writer_temperatures_red.printstring('',True)
+
+                writer_temperatures.set_textpos(my_text_display,  20 + i, 270)
+                writer_temperatures.printstring(f'{value:.2f}°C',True)
+            if value > 0:
+                writer_temperatures.set_textpos(my_text_display,  20 + i, 270)
+                writer_temperatures.printstring('',True)
+
+                writer_temperatures_red.set_textpos(my_text_display_red,  20 + i, 270)
+                writer_temperatures_red.printstring(f'+{value:.2f}°C',True)
+            
+            if value == 0: #do not display anything if 0
+                writer_temperatures.set_textpos(my_text_display,  20 + i, 270)
+                writer_temperatures.printstring('',True)
+
+                writer_temperatures_red.set_textpos(my_text_display_red,  20 + i, 270)
+                writer_temperatures_red.printstring('',True)
+            
+            i = i + 18
+          
+          if percent_diff < 0:
+                writer_temperatures_red.set_textpos(my_text_display_red, 200, 270)
+                writer_temperatures_red.printstring('',True)
+
+                writer_temperatures.set_textpos(my_text_display, 200, 270)
+                writer_temperatures.printstring(f'{percent_diff}%',True)
+         
+          if percent_diff > 0:
+                writer_temperatures.set_textpos(my_text_display, 200, 270)
+                writer_temperatures.printstring('',True)
+
+                writer_temperatures_red.set_textpos(my_text_display_red, 200, 270)
+                writer_temperatures_red.printstring(f'+{percent_diff}%',True)
+          
+          if percent_diff == 0:
+                writer_temperatures.set_textpos(my_text_display, 200, 270)
+                writer_temperatures.printstring('',True)
+
+                writer_temperatures_red.set_textpos(my_text_display_red, 200, 270)
+                writer_temperatures_red.printstring('',True)
+        
+def writer_print_text_temperatures(string_to_print, row, column, color):
+    
+    writer_temperatures.set_textpos(my_text_display, row, column)
+    writer_temperatures_red.set_textpos(my_text_display_red, row, column)
+    writer_temperatures.printstring('',True)
+    writer_temperatures_red.printstring('',True) #clear both colors at the beginning
+    
+    if color == 'red':
+                writer_temperatures_red.printstring(string_to_print,True)
+    
+    if color == 'black':
+                writer_temperatures.printstring(string_to_print,True)
+    
+def print_and_color_temp_diffs(value, format_string, row, column): #positive values - "+" and red, negative - black and "-"
+
+    if value > 0:
+         writer_print_text_temperatures(format_string, row, column, "red")
+
+    if value < 0:
+         writer_print_text_temperatures(format_string, row, column, "black")
+
+    if value == 0:
+        writer_print_text_temperatures("", row, column, "")
