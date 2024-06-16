@@ -184,7 +184,8 @@ def buffer_indicator(buffer_dict):
         for sensors, values in sorted(buffer_dict.items()):
             print(sensors, values)
             if 'temp' in sensors:
-                temperatures_dict[sensors]=int(values)
+                if 'solar' not in sensors: #quick workaround for added sensor
+                    temperatures_dict[sensors]=int(values)
         
         screen_width = 400
         screen_height = 300
@@ -400,9 +401,9 @@ async def main(client):
         clear_framebuffers()
                 
         for i in range (9):
-            test_writer.set_textpos(my_text_display,170, 10 + i * 14)
+            test_writer.set_textpos(my_text_display,10 + i * 14, 20 )
             test_writer.printstring("brak połączenia przez okres 1 minuty przy starcie, restart systemu") 
-        frame_update()
+        #frame_update()
         import machine
         machine.reset()
         print("ESP32 reset")
