@@ -150,11 +150,12 @@ def show_temperature_and_load_difference(previous_meas_dict,global_dict_sensors)
 
           for sensors, values in sorted(previous_meas_dict.items()):
             print(sensors, values)
-            if 'temp' in sensors:
-                temp_difference = global_dict_sensors[sensors] - previous_meas_dict[sensors]  
-                print(f'{temp_difference}C diff')
-                temperature_diff[sensors]=temp_difference 
-                average_temp_change += temp_difference/9
+            if 'temp' in sensors: 
+                   if 'solar' not in sensors: #to be refactored
+                     temp_difference = global_dict_sensors[sensors] - previous_meas_dict[sensors]  
+                     print(f'{temp_difference}C diff')
+                     temperature_diff[sensors]=temp_difference 
+                     average_temp_change += temp_difference/9
           
           a = 'kWh'
           #1% - 0,628kWh
@@ -164,15 +165,15 @@ def show_temperature_and_load_difference(previous_meas_dict,global_dict_sensors)
           print(f'Percent_diff:{percent_diff:.2f}%')
          
           
-          i = 0
-          for temperature, value in sorted(temperature_diff.items()):
+          #i = 0
+          #for temperature, value in sorted(temperature_diff.items()):
             
-            print_and_color_temp_diffs(value, f'{value:.2f}°C', 20 + i, 270)
-            i = i + 18
+           # print_and_color_temp_diffs(value, f'{value:.2f}°C', 20 + i, 270)
+           # i = i + 18
           
           print_and_color_temp_diffs(percent_diff, f'{percent_diff:.2f}%', 200, 270)
-          print_and_color_temp_diffs(kwh_change, f'{kwh_change:.2f}kWh', 215, 270)
-          print_and_color_temp_diffs(average_temp_change, f'{average_temp_change:.2f}°C',  262 , 10)
+          #print_and_color_temp_diffs(kwh_change, f'{kwh_change:.2f}kWh', 215, 270)
+          #print_and_color_temp_diffs(average_temp_change, f'{average_temp_change:.2f}°C',  262 , 10)
        
          
 def buffer_indicator(buffer_dict):
@@ -211,8 +212,9 @@ def buffer_indicator(buffer_dict):
             i = i + buffer_tempbar_height
             average_temperature += value/9
         
-        writer_temperatures.set_textpos(my_text_display, 250, 10)
-        writer_temperatures.printstring(f'{int(average_temperature)}°C',True)
+        
+        wri.set_textpos(my_text_display, 300, 140)
+        wri.printstring(f'{int(average_temperature)}°C',True)
         
         bar_thickness = 2
 
