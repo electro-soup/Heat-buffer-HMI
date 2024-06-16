@@ -86,6 +86,19 @@ Item {
      thingId: "{7e038a42-cc88-4679-a3d4-164c969a1012}" // Panele słoneczne
      stateName: "currentPower"
  }
+ 
+ 
+ ThingState {
+     id: solar_temp1
+     thingId: "{e1ae2205-c449-4b7b-9426-1fa41ef0d074}" // Solar_T1
+     stateName: "temperature"
+ }
+ 
+ ThingState {
+     id: solar_temp2
+     thingId: "{838d808c-05ea-4b54-87aa-49a34681a90b}" // Gen_T_Sensor_1
+     stateName: "temperature"
+ }
 //InterfaceState {
  //   interfaceName: "temperaturesensor"
   //  onStateChanged: {console.log("Battery level changed to", value, "for", myThings.getThing(thingId).name)
@@ -107,7 +120,7 @@ Item {
             var mqtt_topic = "home/kotlownia/bufor"
             var mqtt_data = ""
             mqtt_data = JSON.stringify({id: "bufor", temp0: bufor_temp0.value, temp1: bufor_temp1.value, temp2: bufor_temp2.value, temp3: bufor_temp3.value, temp4: bufor_temp4.value, temp5: bufor_temp5.value, temp6: bufor_temp6.value, temp7: bufor_temp7.value, temp8: bufor_temp8.value,
-             load_percent: bufor_load_percent.value, kWh: bufor_kWh_load.value, power: -1*bufor_power.value})
+             load_percent: bufor_load_percent.value, kWh: bufor_kWh_load.value, power: -1*bufor_power.value, solar_temp1: solar_temp1.value, solar_temp2:solar_temp2.value})
             console.log(mqtt_topic, mqtt_data)
             mqtt_bufor_temperatures.execute({"topic": mqtt_topic, "data": mqtt_data, "qos": 0, "retain": false})
             
