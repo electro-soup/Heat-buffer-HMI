@@ -87,7 +87,7 @@ from mqtt_as import MQTTClient
 from mqtt_local import wifi_led, blue_led, config
 import uasyncio as asyncio
 import json
-import struct
+
 
 outages = 0
 temp = []
@@ -175,7 +175,27 @@ def show_temperature_and_load_difference(previous_meas_dict,global_dict_sensors)
           #print_and_color_temp_diffs(kwh_change, f'{kwh_change:.2f}kWh', 215, 270)
           #print_and_color_temp_diffs(average_temp_change, f'{average_temp_change:.2f}°C',  262 , 10)
        
-         
+
+def solar_indocator(buffer_dict):
+     
+     x_pos = 270
+     y_pos = 10
+     temp_correction = 14 #temporary temperature correction of main temp sens on solar system
+     framebuffer.rect(x_pos, y_pos, 110, 60, "black")
+     framebuffer.rect(x_pos + 1, y_pos + 1, 108, 58, "red")
+     writer_temperatures.set_textpos(my_text_display,y_pos+4, x_pos+2)
+     writer_temperatures.printstring(f'{int(buffer_dict['solar_temp1'])+temp_correction}°C', True)
+
+     test_writer.set_textpos(my_text_display, 29, 300)
+     test_writer.printstring("solar", True)
+
+     writer_temperatures.set_textpos(my_text_display,y_pos+2, x_pos + 80 )
+     writer_temperatures.printstring(f'{int(buffer_dict['solar_temp2'])}°C', True)
+
+a = 5
+b = 6
+c = 7
+d = 8
 def buffer_indicator(buffer_dict):
         
         temperatures_dict = {}
@@ -191,6 +211,8 @@ def buffer_indicator(buffer_dict):
         screen_width = 400
         screen_height = 300
         
+        solar_indocator(buffer_dict)
+
         screen_horizontal_middle = screen_width/2
 
         i = 0
@@ -212,8 +234,14 @@ def buffer_indicator(buffer_dict):
             i = i + buffer_tempbar_height
             average_temperature += value/9
         
-        
-        wri.set_textpos(my_text_display, 300, 140)
+        column = 270
+
+        test_writer.set_textpos(my_text_display, 100, column)
+        test_writer.printstring('średnia',True)
+        test_writer.set_textpos(my_text_display, 120, column)
+        test_writer.printstring('temperatura',True)
+
+        wri.set_textpos(my_text_display, 140, column)
         wri.printstring(f'{int(average_temperature)}°C',True)
         
         bar_thickness = 2
@@ -288,13 +316,15 @@ def sub_cb(topic, msg, retained):
         print(temp_dict)
         global_dict_sensors = temp_dict  #copy it to the global dict (temp solution)
         framebuffer.fill('white')          
-        buffer_indicator(temp_dict)
-        print(counter)
-        if counter == 0:
+        if counter == 0: #before GUI update - to prevent from unwanted resets because of bug in buffer_ind
              asyncio.create_task(frame_first_update())
         counter += 1
+        buffer_indicator(temp_dict)
+        print(counter)
+        
         
 async def frame_first_update():
+     await asyncio.sleep(1) # wait a second
      e.reset()
      e.init()
      current_time = time.localtime()
