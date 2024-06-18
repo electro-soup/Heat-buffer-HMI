@@ -41,54 +41,28 @@ black = 0
 white = 1
 red = 0
 
+def clear_framebuffers():
+    fb_red.fill(white)
+    fb_black.fill(white)
+
+
 def clear_screen():
-	fb_red.fill(white)
-	fb_black.fill(white)
+	clear_framebuffers()
 	e.display_frame(buf_black, buf_red)
 
 
 black = 0
 white = 1
 
-# display as much as this as fits in the box
-str = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Etiam vel neque in elit tristique vulputate at et dui. Maecenas nec felis lectus. Pellentesque sit amet facilisis dui. Maecenas ac arcu euismod, tempor massa quis, ultricies est.'
-
-# this could be useful as a new method in FrameBuffer
-def text_wrap(str,x,y,color,w,h,border=None):
-	# optional box border
-	if border is not None:
-		fb_black.rect(x, y, w, h, border)
-	cols = w // 8
-	# for each row
-	j = 0
-	for i in range(0, len(str), cols):
-		# draw as many chars fit on the line
-		fb_black.text(str[i:i+cols], x, y + j, color)
-		j += 8
-		# dont overflow text outside the box
-		if j >= h:
-			break
-
-# draw text box 3
-bx = 0
-by = 184
-bw = w//2 # 64 = 8 cols
-bh = 8 * 8 # 64 = 8 rows (64 chars in total)
-#text_wrap(str,bx,by,black,bw,bh,None)
-
 
 from ThreeColorFrameBuffer import ThreeColorFrameBuffer
 
 framebuffer = ThreeColorFrameBuffer(400, 300, fb_black, fb_red)
 
-
-
 def frame_update():
     e.display_frame(buf_black,buf_red)
     print("frame update")
      
-
-
 #how to handle arrays 
 #import array
 #myData = array.array('I', [10,10,120,30,30,61])
@@ -113,7 +87,7 @@ from mqtt_as import MQTTClient
 from mqtt_local import wifi_led, blue_led, config
 import uasyncio as asyncio
 import json
-import struct
+
 
 outages = 0
 temp = []
@@ -141,30 +115,111 @@ wri = Writer(my_text_display, font42_bufferload)
 writer_temperatures = Writer(my_text_display, font12_temperature)
 test_writer = Writer(my_text_display, font15_testall)
 writer_red_power = Writer(my_text_display_red, font15_testall)
+writer_temperatures_red = Writer(my_text_display_red, font12_temperature)
 
+def writer_print_text_temperatures(string_to_print, row, column, color):
+    
+    writer_temperatures.set_textpos(my_text_display, row, column)
+    writer_temperatures_red.set_textpos(my_text_display_red, row, column)
+    writer_temperatures.printstring('',True)
+    writer_temperatures_red.printstring('',True) #clear both colors at the beginning
+    
+    if color == 'red':
+                writer_temperatures_red.printstring(string_to_print,True)
+    
+    if color == 'black':
+                writer_temperatures.printstring(string_to_print,True)
+    
+def print_and_color_temp_diffs(value, format_string, row, column): #positive values - "+" and red, negative - black and "-"
 
+    if value > 0:
+         writer_print_text_temperatures('+' + format_string, row, column, "red")
+
+    if value < 0:
+         writer_print_text_temperatures(format_string, row, column, "black")
+
+    if value == 0:
+        writer_print_text_temperatures("", row, column, "")
   
-def buffer_indicator(buffer_dict):
+def show_temperature_and_load_difference(previous_meas_dict,global_dict_sensors):
+        
+          temperature_diff = {} 
+          average_temp_change = 0
+          
+          kwh_change = 0
+
+          for sensors, values in sorted(previous_meas_dict.items()):
+            print(sensors, values)
+            if 'temp' in sensors: 
+                   if 'solar' not in sensors: #to be refactored
+                     temp_difference = global_dict_sensors[sensors] - previous_meas_dict[sensors]  
+                     print(f'{temp_difference}C diff')
+                     temperature_diff[sensors]=temp_difference 
+                     average_temp_change += temp_difference/9
+          
+          a = 'kWh'
+          #1% - 0,628kWh
+          kwh_change = global_dict_sensors[a] - previous_meas_dict[a]
+          percent_diff = (kwh_change)/0.628 
+          
+          print(f'Percent_diff:{percent_diff:.2f}%')
+         
+          
+          #i = 0
+          #for temperature, value in sorted(temperature_diff.items()):
+            
+           # print_and_color_temp_diffs(value, f'{value:.2f}°C', 20 + i, 270)
+           # i = i + 18
+          
+          print_and_color_temp_diffs(percent_diff, f'{percent_diff:.2f}%', 200, 270)
+          #print_and_color_temp_diffs(kwh_change, f'{kwh_change:.2f}kWh', 215, 270)
+          #print_and_color_temp_diffs(average_temp_change, f'{average_temp_change:.2f}°C',  262 , 10)
        
+
+def solar_indocator(buffer_dict):
+     
+     x_pos = 270
+     y_pos = 10
+     temp_correction = 14 #temporary temperature correction of main temp sens on solar system
+     framebuffer.rect(x_pos, y_pos, 110, 60, "black")
+     framebuffer.rect(x_pos + 1, y_pos + 1, 108, 58, "red")
+     writer_temperatures.set_textpos(my_text_display,y_pos+4, x_pos+2)
+     writer_temperatures.printstring(f'{int(buffer_dict['solar_temp1'])+temp_correction}°C', True)
+
+     test_writer.set_textpos(my_text_display, 29, 300)
+     test_writer.printstring("solar", True)
+
+     writer_temperatures.set_textpos(my_text_display,y_pos+2, x_pos + 80 )
+     writer_temperatures.printstring(f'{int(buffer_dict['solar_temp2'])}°C', True)
+
+a = 5
+b = 6
+c = 7
+d = 8
+def buffer_indicator(buffer_dict):
+        
         temperatures_dict = {}
-       # test_writer.set_textpos(my_text_display, 4, 4)
-       # test_writer.printstring("!%()*+,-./0123456789:\n;<=>?@ABCDEFGHI\nJKLMNOPQRSTUVW \n XYZ[\]^_`abcd\nefghijklmnopqr\nstuvwxyz{|}°\nąężźćó\nĄĘŻŹĆÓ", True)
+        #test_writer.set_textpos(my_text_display, 4, 4)
+        #test_writer.printstring("!%()*+,-./0123456789:\n;<=>?@ABCDEFGHI\nJKLMNOPQRSTUVW \n XYZ[\]^_`abcd\nefghijklmnopqr\nstuvwxyz{|}°\nąężźćó\nĄĘŻŹĆÓ", True)
         
         for sensors, values in sorted(buffer_dict.items()):
             print(sensors, values)
             if 'temp' in sensors:
-                temperatures_dict[sensors]=int(values)
+                if 'solar' not in sensors: #quick workaround for added sensor
+                    temperatures_dict[sensors]=int(values)
         
         screen_width = 400
         screen_height = 300
         
+        solar_indocator(buffer_dict)
+
         screen_horizontal_middle = screen_width/2
 
         i = 0
         lower_tempC = 30
         upper_tempC = 90
         delta_tempC = upper_tempC - lower_tempC
-        
+        average_temperature = 0
         buffer_tempbar_width = 100
         buffer_tempbar_height = 18
         
@@ -172,20 +227,28 @@ def buffer_indicator(buffer_dict):
         #printing temperature values and creating temperature bars
         for temp_sens, value in sorted(temperatures_dict.items()):
             
-            framebuffer.text(f'{value}C', buffer_x-30, buffer_y + int(buffer_tempbar_height/2) -3 + i, 'black')
             framebuffer.rect(buffer_x + 1,buffer_y+i+1, int(((value - lower_tempC)/delta_tempC)*buffer_tempbar_width), buffer_tempbar_height - 1,'red', True )
-            i = i + buffer_tempbar_height
-            
             #test - using writer class to show temperatures (works fine)
-            writer_temperatures.set_textpos(my_text_display, i+5, 260)
+            writer_temperatures.set_textpos(my_text_display, buffer_y + i, buffer_x-40)
             writer_temperatures.printstring(f'{value}°C',True)
+            i = i + buffer_tempbar_height
+            average_temperature += value/9
+        
+        column = 270
 
+        test_writer.set_textpos(my_text_display, 100, column)
+        test_writer.printstring('średnia',True)
+        test_writer.set_textpos(my_text_display, 120, column)
+        test_writer.printstring('temperatura',True)
+
+        wri.set_textpos(my_text_display, 140, column)
+        wri.printstring(f'{int(average_temperature)}°C',True)
+        
         bar_thickness = 2
+
         for layer in range(bar_thickness):    
             framebuffer.rect(buffer_x - layer, buffer_y - layer, buffer_tempbar_width + 2*layer, i+2*layer, 'black', False) #make one big black rectangle
         
-
-
         # percent load bar
         percent_value = int(buffer_dict['load_percent'])
         actual_power = int(buffer_dict['power'])
@@ -222,10 +285,8 @@ def buffer_indicator(buffer_dict):
              framebuffer.vline(load_buffer_x_pos + vline_pos, load_bufer_y_pos+1,bar_height, color)
              framebuffer.vline(load_buffer_x_pos + vline_pos+1, load_bufer_y_pos+1,bar_height, color)
 
-        framebuffer.text( f'procent:{percent_value}%', 300, 220, 'black')
-        framebuffer.text( f'moc:{actual_power}W', 300, 230, 'red')    
          
-        writer_red_power.set_textpos(my_text_display_red, 170, 300)
+        writer_red_power.set_textpos(my_text_display_red, 250, 300)
         writer_red_power.printstring(f"moc: {actual_power}W",True) 
         #big fonted percent value 
         writer_row_pos = 195
@@ -236,6 +297,7 @@ def buffer_indicator(buffer_dict):
      
 counter = 0
     
+global_dict_sensors = {}
 
 # Subscription callback
 def sub_cb(topic, msg, retained):
@@ -244,19 +306,25 @@ def sub_cb(topic, msg, retained):
     print(f'Topic: "{topic.decode()}" Message: "{msg.decode()}" Retained: {retained}')
     print(topic.decode())
    
+    global global_dict_sensors
+
     if topic.decode() == 'home/kotlownia/bufor':
+
+        
         temp_msg = msg.decode()
         temp_dict = json.loads(temp_msg)
         print(temp_dict)
-    
+        global_dict_sensors = temp_dict  #copy it to the global dict (temp solution)
         framebuffer.fill('white')          
-        buffer_indicator(temp_dict)
-        print(counter)
-        if counter == 0:
+        if counter == 0: #before GUI update - to prevent from unwanted resets because of bug in buffer_ind
              asyncio.create_task(frame_first_update())
         counter += 1
+        buffer_indicator(temp_dict)
+        print(counter)
+        
         
 async def frame_first_update():
+     await asyncio.sleep(1) # wait a second
      e.reset()
      e.init()
      current_time = time.localtime()
@@ -291,9 +359,23 @@ async def conn_han(client):
 
 async def frame_update_async():
      while True:
-          await asyncio.sleep(60*5)
+          global counter
+          while (counter == 0):
+              print("waiting for first mqtt frame ")
+              await asyncio.sleep(1)
+
+
+          print("async frame update")
+          previous_meas_dict = global_dict_sensors
+
+          minutes_to_wait = 5
+          await asyncio.sleep(60*minutes_to_wait)
           e.reset()
           e.init()
+
+          show_temperature_and_load_difference(previous_meas_dict,global_dict_sensors)
+        
+          
           current_time = time.localtime()
           formatted_time = "{:02}:{:02}:{:02}".format(current_time[3], current_time[4], current_time[5])
           framebuffer.text(formatted_time, 300, 270,'red')
@@ -305,8 +387,42 @@ async def reset_system():
      import machine
      while True:
           await asyncio.sleep(60*60*6) # perform reset after 6 hours
+          print("reset in the loop")
           machine.reset()
-          
+
+async def simple_watchdog():
+    
+    global counter
+    import machine
+    temp_counter = 0
+    while True:
+        
+        while counter == 0:
+            await asyncio.sleep(60) #wait 1 minute - if counter is 0 (no MQTT frames )
+            if counter == 0:
+                clear_framebuffers()
+                
+                for i in range (9):
+                  test_writer.set_textpos(my_text_display,10 , 170 )
+                  test_writer.printstring("brak połączenia przez okres 1 minuty przy starcie, restart systemu") 
+                frame_update()
+                machine.reset()
+
+        temp_counter = counter
+
+        await asyncio.sleep(60*10)
+        if counter == temp_counter:
+                
+            clear_framebuffers()
+            for i in range (9):
+                test_writer.set_textpos(my_text_display,170, 10 + i * 14)
+                test_writer.printstring("brak nowych MQTT w ciągu 10 minut, restart systemu") 
+            frame_update()
+                
+            machine.reset() #if there is no new mqtt message - reset - but in the future it should be error handling (mqtt server maybe down etc)
+
+
+    
 
 async def main(client):
     try:
@@ -314,6 +430,12 @@ async def main(client):
         
     except OSError:
         print('Connection failed.')
+        clear_framebuffers()
+                
+        for i in range (9):
+            test_writer.set_textpos(my_text_display,10 + i * 14, 20 )
+            test_writer.printstring("brak połączenia przez okres 1 minuty przy starcie, restart systemu") 
+        #frame_update()
         import machine
         machine.reset()
         print("ESP32 reset")
@@ -351,6 +473,7 @@ client = MQTTClient(config)
 asyncio.create_task(reset_system())
 asyncio.create_task(heartbeat())
 asyncio.create_task(frame_update_async())
+asyncio.create_task(simple_watchdog())
 
 
 try:
@@ -358,3 +481,6 @@ try:
 finally:
     client.close()  # Prevent LmacRxBlk:1 errors
     asyncio.new_event_loop()
+
+
+        
