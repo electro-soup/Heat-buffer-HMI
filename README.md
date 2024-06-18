@@ -12,4 +12,5 @@ flowchart LR
 
 Very alpha phase, but something is working ;)
 
-![image](https://github.com/electro-soup/Heat-buffer-HMI/assets/16262155/169a89ef-69e8-4b98-a323-66ab9d9ae0f2)
+
+![image](https://github.com/electro-soup/Heat-buffer-HMI/assets/16262155/740319c2-2b96-479b-804f-69a5b0ff3c9d)
