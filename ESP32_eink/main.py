@@ -189,13 +189,10 @@ def solar_indocator(buffer_dict):
      test_writer.set_textpos(my_text_display, 29, 300)
      test_writer.printstring("solar", True)
 
-     writer_temperatures.set_textpos(my_text_display,y_pos+2, x_pos + 80 )
+     writer_temperatures.set_textpos(my_text_display,y_pos+4, x_pos + 70 )
      writer_temperatures.printstring(f'{int(buffer_dict['solar_temp2'])}°C', True)
 
-a = 5
-b = 6
-c = 7
-d = 8
+
 def buffer_indicator(buffer_dict):
         
         temperatures_dict = {}
@@ -239,7 +236,7 @@ def buffer_indicator(buffer_dict):
         test_writer.set_textpos(my_text_display, 100, column)
         test_writer.printstring('średnia',True)
         test_writer.set_textpos(my_text_display, 120, column)
-        test_writer.printstring('temperatura',True)
+        test_writer.printstring('temperatura:',True)
 
         wri.set_textpos(my_text_display, 140, column)
         wri.printstring(f'{int(average_temperature)}°C',True)
