@@ -98,6 +98,7 @@ from writer import Writer
 import font42_bufferload
 import font12_temperature
 import font15_testall
+#import font3Mono
 #getting bigger font using Writer class and some code from the internet
 class NotionalDisplay(framebuf.FrameBuffer):
     def __init__(self, width, height,buffer):
@@ -116,7 +117,7 @@ writer_temperatures = Writer(my_text_display, font12_temperature)
 test_writer = Writer(my_text_display, font15_testall)
 writer_red_power = Writer(my_text_display_red, font15_testall)
 writer_temperatures_red = Writer(my_text_display_red, font12_temperature)
-
+#loading too much objects create issue with wifi startup
 def writer_print_text_temperatures(string_to_print, row, column, color):
     
     writer_temperatures.set_textpos(my_text_display, row, column)

@@ -1,0 +1,7 @@
+1. reset sequence - should go to the blank screen after 10 retries, then ecu should restart again in 10 minutes, to preserve power and screen (sleep mode?)
+2. Debug- I don't know what happens when MCU hangs etc. -> handlig via MQTT?
+3.After adding more code, there ram issue happens - Wifi can not be initialized. To investigate
+
+TODO:
+1. making screen update asynchronous - now it blocks MCU for 15 because it waits in while loop for IDLE pin to go down - can be just sampled every second or something like that (and put semaphor hehe - or reading IDLE directly if function wants to update display)
+2. Mock screen - to quickly see GUI update, not to wait until MQTT frame
