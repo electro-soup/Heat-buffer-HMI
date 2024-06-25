@@ -118,6 +118,7 @@ test_writer = Writer(my_text_display, font15_testall)
 writer_red_power = Writer(my_text_display_red, font15_testall)
 writer_temperatures_red = Writer(my_text_display_red, font12_temperature)
 #loading too much objects create issue with wifi startup
+
 def writer_print_text_temperatures(string_to_print, row, column, color):
     
     writer_temperatures.set_textpos(my_text_display, row, column)
@@ -175,23 +176,42 @@ def show_temperature_and_load_difference(previous_meas_dict,global_dict_sensors)
           print_and_color_temp_diffs(percent_diff, f'{percent_diff:.2f}%', 200, 270)
           #print_and_color_temp_diffs(kwh_change, f'{kwh_change:.2f}kWh', 215, 270)
           #print_and_color_temp_diffs(average_temp_change, f'{average_temp_change:.2f}°C',  262 , 10)
-       
 
-def solar_indocator(buffer_dict):
+buffer_sensors_dict = {
+     'temp1': -99,
+     'temp2': -99,
+     'temp3': -99,
+     'temp4': -99,
+     'temp5': -99,
+     'temp6': -99,
+     'temp7': -99,
+     'temp8': -99,
+     'kWh'  : -9999,
+     'load_percent': -99
+
+}
+
+solar_sensors_dict = {
+      'solar_temp1': 99, #99 as init value
+      'solar_temp2': 99 
+}      
+
+def solar_indicator(solar_dict):
      
      x_pos = 270
      y_pos = 10
-     temp_correction = 14 #temporary temperature correction of main temp sens on solar system
+     temp_correction = 0 #temporary temperature correction of main temp sens on solar system
      framebuffer.rect(x_pos, y_pos, 110, 60, "black")
      framebuffer.rect(x_pos + 1, y_pos + 1, 108, 58, "red")
      writer_temperatures.set_textpos(my_text_display,y_pos+4, x_pos+2)
-     writer_temperatures.printstring(f'{int(buffer_dict['solar_temp1'])+temp_correction}°C', True)
+     writer_temperatures.printstring(f'{int(solar_dict['solar_temp1'])+temp_correction}°C', True)
 
      test_writer.set_textpos(my_text_display, 29, 300)
      test_writer.printstring("solar", True)
 
      writer_temperatures.set_textpos(my_text_display,y_pos+4, x_pos + 70 )
-     writer_temperatures.printstring(f'{int(buffer_dict['solar_temp2'])}°C', True)
+     writer_temperatures.printstring(f'{int(solar_dict['solar_temp2'])}°C', True)
+
 
 
 def buffer_indicator(buffer_dict):
@@ -209,7 +229,7 @@ def buffer_indicator(buffer_dict):
         screen_width = 400
         screen_height = 300
         
-        solar_indocator(buffer_dict)
+        solar_indicator(buffer_dict)
 
         screen_horizontal_middle = screen_width/2
 
