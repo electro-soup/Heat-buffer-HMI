@@ -203,19 +203,40 @@ solar_sensors_dict = {
 
 def solar_indicator(solar_dict):
      
-     x_pos = 270
-     y_pos = 10
-     temp_correction = 0 #temporary temperature correction of main temp sens on solar system
-     framebuffer.rect(x_pos, y_pos, 110, 60, "black")
-     framebuffer.rect(x_pos + 1, y_pos + 1, 108, 58, "red")
-     writer_temperatures.set_textpos(my_text_display,y_pos+4, x_pos+2)
-     writer_temperatures.printstring(f'{int(solar_dict['solar_T0'])+temp_correction}°C', True)
+     x_pos = 265
+     y_pos = 15
+     solar_width = 120
+     solar_height = 70
+     temperature_correction = [0, 0, 2,0]
+     
 
-     test_writer.set_textpos(my_text_display, 29, 300)
+    
+     framebuffer.rect(x_pos, y_pos, solar_width, solar_height, "black")
+     framebuffer.rect(x_pos + 1, y_pos + 1, solar_width - 2, solar_height - 2, "red")
+
+     t_spacing = int((solar_width - font15_testall.max_width()*2)/3)
+     #print all temps in once
+     for i in range(4):
+        test_writer.set_textpos(my_text_display,y_pos-14, x_pos + i*t_spacing)
+        test_writer.printstring(f'T{i}', True)
+    
+     t_spacing = int((solar_width - font15_testall.max_width()*3)/3)
+     
+     for i in range(4):
+        test_writer.set_textpos(my_text_display,y_pos+2, 2+  x_pos + i*t_spacing)
+        key = f'solar_T{i}'
+        value = solar_dict[key] + temperature_correction[i]
+        test_writer.printstring(f'{int(value)}°', True)
+
+     test_writer.set_textpos(my_text_display, 39, 300)
      test_writer.printstring("solar", True)
 
-     writer_temperatures.set_textpos(my_text_display,y_pos+4, x_pos + 70 )
-     writer_temperatures.printstring(f'{int(solar_dict['solar_T1'])}°C', True)
+     #vertical lines simulating panels separation
+     framebuffer.vline(x_pos + int(solar_width/3), y_pos, solar_height, "red")
+     framebuffer.vline(x_pos + int(solar_width*2/3), y_pos, solar_height, "red")
+     
+
+
 
 def update_sensors_dict(dSourceSensors, dDestinationSensors): #risky - for now no handling if something is not definied 
      for sensor, value in dDestinationSensors.items():
@@ -256,7 +277,7 @@ def buffer_indicator(buffer_dict):
             writer_temperatures.set_textpos(my_text_display, buffer_y + i, buffer_x-40)
             writer_temperatures.printstring(f'{value}°C',True)
             i = i + buffer_tempbar_height
-            average_temperature += value/9
+            average_temperature += value/8
         
         column = 270
 
