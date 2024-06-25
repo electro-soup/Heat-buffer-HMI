@@ -178,23 +178,25 @@ def show_temperature_and_load_difference(previous_meas_dict,global_dict_sensors)
           #print_and_color_temp_diffs(average_temp_change, f'{average_temp_change:.2f}°C',  262 , 10)
 
 buffer_sensors_dict = {
-     'temp1': -99,
-     'temp2': -99,
-     'temp3': -99,
-     'temp4': -99,
-     'temp5': -99,
-     'temp6': -99,
-     'temp7': -99,
-     'temp8': -99,
-     'kWh'  : -9999,
-     'load_percent': -99,
-     'power': -99999
+     'temp1': 0,
+     'temp2': 0,
+     'temp3': 0,
+     'temp4': 0,
+     'temp5': 0,
+     'temp6': 0,
+     'temp7': 0,
+     'temp8': 0,
+     'kWh'  : 0,
+     'load_percent': 0,
+     'power': 0
 
 }
 
 solar_sensors_dict = {
-      'solar_temp1': 99, #99 as init value
-      'solar_temp2': 99 
+      'solar_T0': 0, 
+      'solar_T1': 0, 
+      'solar_T2': 0,
+      'solar_T3': 0
 }      
 
 
@@ -207,13 +209,13 @@ def solar_indicator(solar_dict):
      framebuffer.rect(x_pos, y_pos, 110, 60, "black")
      framebuffer.rect(x_pos + 1, y_pos + 1, 108, 58, "red")
      writer_temperatures.set_textpos(my_text_display,y_pos+4, x_pos+2)
-     writer_temperatures.printstring(f'{int(solar_dict['solar_temp1'])+temp_correction}°C', True)
+     writer_temperatures.printstring(f'{int(solar_dict['solar_T0'])+temp_correction}°C', True)
 
      test_writer.set_textpos(my_text_display, 29, 300)
      test_writer.printstring("solar", True)
 
      writer_temperatures.set_textpos(my_text_display,y_pos+4, x_pos + 70 )
-     writer_temperatures.printstring(f'{int(solar_dict['solar_temp2'])}°C', True)
+     writer_temperatures.printstring(f'{int(solar_dict['solar_T1'])}°C', True)
 
 def update_sensors_dict(dSourceSensors, dDestinationSensors): #risky - for now no handling if something is not definied 
      for sensor, value in dDestinationSensors.items():
@@ -248,7 +250,7 @@ def buffer_indicator(buffer_dict):
         buffer_x, buffer_y = int(screen_horizontal_middle - buffer_tempbar_width/2), 20
         #printing temperature values and creating temperature bars
         for temp_sens, value in sorted(temperatures_dict.items()):
-            
+           
             framebuffer.rect(buffer_x + 1,buffer_y+i+1, int(((value - lower_tempC)/delta_tempC)*buffer_tempbar_width), buffer_tempbar_height - 1,'red', True )
             #test - using writer class to show temperatures (works fine)
             writer_temperatures.set_textpos(my_text_display, buffer_y + i, buffer_x-40)
@@ -289,6 +291,8 @@ def buffer_indicator(buffer_dict):
         for layer in range(bar_thickness-3):
             framebuffer.rect(load_buffer_x_pos-layer, load_bufer_y_pos-layer, bar_width+layer*2, bar_height+layer*2, 'white', False) #black frame #1
         
+       
+
         red_bar_width = int(bar_width * (percent_value/100))
         framebuffer.rect(load_buffer_x_pos+1, load_bufer_y_pos+1, red_bar_width, bar_height-2, 'red', True)
         
@@ -322,8 +326,8 @@ def GUI_update():
      global global_dict_sensors
 
      #buffer_sensors_dict = global_dict_sensors #how it is working if global_dict_sensors is not definied here?
-     update_sensors_dict(global_dict_sensors, buffer_sensors_dict)
-     update_sensors_dict(global_dict_sensors, solar_sensors_dict)
+     #update_sensors_dict(global_dict_sensors, buffer_sensors_dict)
+     #update_sensors_dict(global_dict_sensors, solar_sensors_dict)
 
      buffer_indicator(buffer_sensors_dict)
      solar_indicator(solar_sensors_dict)   #to be changed after refactor  
@@ -352,6 +356,8 @@ def sub_cb(topic, msg, retained):
         if counter == 0: #before GUI update - to prevent from unwanted resets because of bug in buffer_ind
              asyncio.create_task(frame_first_update())
         counter += 1
+        update_sensors_dict(global_dict_sensors, buffer_sensors_dict)
+        update_sensors_dict(global_dict_sensors, solar_sensors_dict)
         GUI_update()
         #buffer_indicator(temp_dict)
         print(counter)
@@ -468,7 +474,7 @@ async def main(client):
                 
         for i in range (9):
             test_writer.set_textpos(my_text_display,10 + i * 14, 20 )
-            test_writer.printstring("brak połączenia przez okres 1 minuty przy starcie, restart systemu") 
+            test_writer.printstring("brak połączenia przez okres 1 minuty przy starcie, restart systemu\n") 
         #frame_update()
         import machine
         machine.reset()
@@ -500,6 +506,10 @@ config['clean'] = False
 config['will'] = ('result', 'Goodbye cruel world', False, 0 )
 config['keepalive'] = 120
 
+#init gui update
+clear_framebuffers() #without it screen is red - to investigate
+GUI_update()
+frame_update()
 # Set up client
 MQTTClient.DEBUG = True  # Optional
 client = MQTTClient(config)
