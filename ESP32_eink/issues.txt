@@ -10,3 +10,8 @@ TODO:
 
 IDEAS:
 1.Control through MQTT - powering screen off etc.
+
+BLOCKERS:
+1. After adding code for declaring two dictonaries there is no space for WiFi init:
+E (3098) wifi:Expected to init 10 rx buffer, actual is 5
+micropython v. 1.22, will try flash 1.20
