@@ -187,7 +187,8 @@ buffer_sensors_dict = {
      'temp7': -99,
      'temp8': -99,
      'kWh'  : -9999,
-     'load_percent': -99
+     'load_percent': -99,
+     'power': -99999
 
 }
 
@@ -195,6 +196,8 @@ solar_sensors_dict = {
       'solar_temp1': 99, #99 as init value
       'solar_temp2': 99 
 }      
+
+
 
 def solar_indicator(solar_dict):
      
@@ -212,7 +215,9 @@ def solar_indicator(solar_dict):
      writer_temperatures.set_textpos(my_text_display,y_pos+4, x_pos + 70 )
      writer_temperatures.printstring(f'{int(solar_dict['solar_temp2'])}°C', True)
 
-
+def update_sensors_dict(dSourceSensors, dDestinationSensors): #risky - for now no handling if something is not definied 
+     for sensor, value in dDestinationSensors.items():
+          dDestinationSensors[sensor] = dSourceSensors[sensor]
 
 def buffer_indicator(buffer_dict):
         
@@ -229,7 +234,6 @@ def buffer_indicator(buffer_dict):
         screen_width = 400
         screen_height = 300
         
-        solar_indicator(buffer_dict)
 
         screen_horizontal_middle = screen_width/2
 
@@ -311,7 +315,18 @@ def buffer_indicator(buffer_dict):
         writer_col_pos = 160 
         wri.set_textpos(my_text_display, writer_row_pos, writer_col_pos)
         wri.printstring(f'{percent_value}%', True)
-     
+
+def GUI_update():
+     global solar_sensors_dict
+     global buffer_sensors_dict
+     global global_dict_sensors
+
+     #buffer_sensors_dict = global_dict_sensors #how it is working if global_dict_sensors is not definied here?
+     update_sensors_dict(global_dict_sensors, buffer_sensors_dict)
+     update_sensors_dict(global_dict_sensors, solar_sensors_dict)
+
+     buffer_indicator(buffer_sensors_dict)
+     solar_indicator(solar_sensors_dict)   #to be changed after refactor  
      
 counter = 0
     
@@ -337,7 +352,8 @@ def sub_cb(topic, msg, retained):
         if counter == 0: #before GUI update - to prevent from unwanted resets because of bug in buffer_ind
              asyncio.create_task(frame_first_update())
         counter += 1
-        buffer_indicator(temp_dict)
+        GUI_update()
+        #buffer_indicator(temp_dict)
         print(counter)
         
         
