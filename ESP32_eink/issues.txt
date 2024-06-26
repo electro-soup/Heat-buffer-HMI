@@ -18,3 +18,4 @@ micropython v. 1.22, will try flash 1.20 - update - works fine with 1.21
 
 2. after loading init values (-99 etc) and displaying it causes all screen go red - GUI elements (rectangles etc. does not handle (-) values)
 3. assert will be needed if buffer loads etc drop below zero
+4. if there is connection with broker disrupted, then two instances of wifi are created

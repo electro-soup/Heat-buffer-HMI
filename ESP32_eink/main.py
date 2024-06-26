@@ -410,6 +410,7 @@ async def wifi_han(state):
     else:
         outages += 1
         print('WiFi is down.')
+        clear_screen()
     await asyncio.sleep(1)
     
 # If you connect with clean_session True, must re-subscribe (MQTT spec 3.1.2.4)
@@ -533,19 +534,26 @@ GUI_update()
 frame_update()
 # Set up client
 MQTTClient.DEBUG = True  # Optional
+
+#setup client is the most buggy - so watchdogs will be setup here (test)
+asyncio.create_task(reset_system())
+asyncio.create_task(simple_watchdog())
+
 client = MQTTClient(config)
 
-asyncio.create_task(reset_system())
+
 asyncio.create_task(heartbeat())
 asyncio.create_task(frame_update_async())
-asyncio.create_task(simple_watchdog())
+
 
 
 try:
     asyncio.run(main(client))
 finally:
     client.close()  # Prevent LmacRxBlk:1 errors
-    asyncio.new_event_loop()
+    asyncio.new_event_loop() #this works? 
+    import machine
+    machine.reset() #this should work in case if everything is not working (OSErrors etc)
 
 
         
