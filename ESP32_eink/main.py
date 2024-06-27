@@ -116,6 +116,9 @@ class NotionalDisplay(framebuf.FrameBuffer):
     def show():
         ...
 
+
+     
+
 my_text_display = NotionalDisplay(400, 300, buf_black)
 my_text_display_red = NotionalDisplay(400, 300,buf_red)
 wri = Writer(my_text_display, font42_bufferload)
@@ -124,6 +127,14 @@ test_writer = Writer(my_text_display, font15_testall)
 writer_red_power = Writer(my_text_display_red, font15_testall)
 writer_temperatures_red = Writer(my_text_display_red, font12_temperature)
 #loading too much objects create issue with wifi startup
+
+def eink_debug_print(string_to_print, row, column, color):
+     e.reset()
+     e.init()
+     test_writer.set_clip(row, column)
+     test_writer.printstring(string_to_print)
+     frame_update()
+     e.sleep()
 
 def writer_print_text_temperatures(string_to_print, row, column, color):
     
@@ -421,7 +432,7 @@ async def wifi_han(state):
         outages += 1
         print('WiFi is down.')
         print(f'wifi han state: {state}')
-        asyncio.create_task(frame_clear_async())
+        #asyncio.create_task(frame_clear_async())
         counter = 0 #reset counter, to show dipslay if mqtt is reestablished
     await asyncio.sleep(1)
     
@@ -436,12 +447,12 @@ async def frame_update_async():
           global counter
           while (counter == 0):
               print("waiting for first mqtt frame ")
-              await asyncio.sleep(1)
+              await asyncio.sleep(5)
 
 
           print("async frame update")
           previous_meas_dict = global_dict_sensors
-
+          # TODO - check timings here and flow
           minutes_to_wait = 5
           await asyncio.sleep(60*minutes_to_wait)
           e.reset()
@@ -470,7 +481,7 @@ async def simple_watchdog():
     import machine
     temp_counter = 0
     while True:
-    
+    # TODO - here everything is to be refactored, it is not clear at all
         while counter == 0:
             await asyncio.sleep(60*3) #wait 1 minute - if counter is 0 (no MQTT frames )
             if counter == 0:
@@ -480,13 +491,14 @@ async def simple_watchdog():
                   test_writer.set_textpos(my_text_display,10 , 170 )
                   test_writer.printstring("brak połączenia przez okres 3 minut przy starcie, restart systemu") 
                 frame_update()
+                print("reset after 3min from startup - no mqtt")
                 machine.reset()
 
-        temp_counter = counter
+        temp_counter = counter # TODO: check if this makes sense at all
 
         await asyncio.sleep(60*10)
         if counter == temp_counter:
-                
+            # TODO clean this up     
             clear_framebuffers()
             for i in range (9):
                 test_writer.set_textpos(my_text_display,170, 10 + i * 14)
@@ -515,11 +527,7 @@ async def main(client):
         print("ESP32 reset")
    
     n = 0
-    #await client.subscribe('home/kotlownia/bufor', 0)
-    #await client.subscribe('home/OMG_ESP32_BLE/BTtoMQTT/A4C138F53164', 0)
-    #await client.subscribe('home/OMG_ESP32_BLE/BTtoMQTT/A4C138D1110F', 0)
-    #await client.subscribe('home/OMG_ESP32_BLE/BTtoMQTT/A4C138425C0D', 0)
-    #await client.subscribe('home/OMG_ESP32_BLE/BTtoMQTT/A4C138250A06', 0)
+   
     
     while True:
         await asyncio.sleep(5)
@@ -527,8 +535,14 @@ async def main(client):
         # If WiFi is down the following will pause for the duration.
         await client.publish('result', '{} repubs: {} outages: {}'.format(n, client.REPUB_COUNT, outages), qos = 1)
         n += 1
-        await client.wait_msg()
+        # after 3 publish there is wifi down
+        #await client.wait_msg()
         #await client._keep_connected()
+          
+        # get the current task
+        task = asyncio.current_task()
+        # report its details
+        print(task)
         
         
 
@@ -539,21 +553,22 @@ config['connect_coro'] = conn_han
 config['clean'] = False
 config['will'] = ('result', 'Goodbye cruel world', False, 0 )
 config['keepalive'] = 120
-config['response_time'] = 30 #3*10 init value, nymea system too slow?
-
+config['response_time'] = 90 # TODO - what is the function
+#increasing response time fixed issue with disconnecting wifi
 #init gui update
-clear_framebuffers() #without it screen is red - to investigate
+clear_framebuffers() # TODO without it screen is red - to investigate
 GUI_update()
 frame_update()
 # Set up client
 MQTTClient.DEBUG = True  # Optional
 
 #setup client is the most buggy - so watchdogs will be setup here (test)
-asyncio.create_task(reset_system())
-asyncio.create_task(simple_watchdog())
+
 
 client = MQTTClient(config)
 
+#asyncio.create_task(reset_system())
+#asyncio.create_task(simple_watchdog())
 
 asyncio.create_task(heartbeat())
 asyncio.create_task(frame_update_async())
@@ -565,14 +580,18 @@ try:
 
 except OSError as e:
         print("OSError:", e)
+        eink_debug_print(e, 1, 1, "black")
+        # TODO handling of those errors - when I ctr-c repl, then it goes straight to reset point
 except Exception as e:
         print("exception error:", e)
+        eink_debug_print(e, 50, 1, "red")
 finally:
     client.close()  # Prevent LmacRxBlk:1 errors
     asyncio.new_event_loop() #this works? 
     import machine
     print("reset from the main loop")
-    machine.reset() #this should work in case if everything is not working (OSErrors etc)
-
-
+    #machine.reset() #this should work in case if everything is not working (OSErrors etc)
+# TODO displaying errors on eink
+# TODO sending and subscribing same topic as closed loop
+# TODO if ecu is close to router, it keeps going blank (wifi is down)
         
