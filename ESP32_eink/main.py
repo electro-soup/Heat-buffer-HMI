@@ -432,7 +432,7 @@ async def wifi_han(state):
         outages += 1
         print('WiFi is down.')
         print(f'wifi han state: {state}')
-        #asyncio.create_task(frame_clear_async())
+        asyncio.create_task(frame_clear_async())
         counter = 0 #reset counter, to show dipslay if mqtt is reestablished
     await asyncio.sleep(1)
     
@@ -517,15 +517,16 @@ async def main(client):
     except OSError:
         print('Connection failed.')
         clear_framebuffers()
-                
+           
         for i in range (9):
             test_writer.set_textpos(my_text_display,10 + i * 14, 20 )
             test_writer.printstring("brak połączenia przez okres 1 minuty przy starcie, restart systemu\n") 
         #frame_update()
+        asyncio.create_task(frame_clear_async())
         import machine
         machine.reset()
-        print("ESP32 reset")
-   
+        #print("ESP32 reset")
+        # TODO - proper handling of this error - it just stays here (without reset)
     n = 0
    
     
@@ -595,3 +596,4 @@ finally:
 # TODO sending and subscribing same topic as closed loop
 # TODO if ecu is close to router, it keeps going blank (wifi is down)
         
+# TODO if there is no connection over long period of time - screen should be cleared once per hour
