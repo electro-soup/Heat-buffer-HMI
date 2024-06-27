@@ -4,6 +4,8 @@
 """
 
 import epaper4in2
+
+
 from machine import Pin, SPI
 
 # SPIV on ESP32
@@ -47,8 +49,12 @@ def clear_framebuffers():
 
 
 def clear_screen():
-	clear_framebuffers()
-	e.display_frame(buf_black, buf_red)
+    
+    e.reset()
+    e.init()
+    clear_framebuffers()
+    e.display_frame(buf_black, buf_red)
+    e.sleep()
 
 
 black = 0
@@ -394,6 +400,9 @@ async def frame_first_update():
      frame_update()
      e.sleep()
 
+async def frame_clear_async():
+     clear_screen()
+
 # Demonstrate scheduler is operational.
 async def heartbeat():
     s = True
@@ -404,19 +413,22 @@ async def heartbeat():
 
 async def wifi_han(state):
     global outages
+    global counter
     wifi_led(not state)
     if state:
         print('WiFi is up.')
     else:
         outages += 1
         print('WiFi is down.')
-        clear_screen()
+        print(f'wifi han state: {state}')
+        asyncio.create_task(frame_clear_async())
+        counter = 0 #reset counter, to show dipslay if mqtt is reestablished
     await asyncio.sleep(1)
     
 # If you connect with clean_session True, must re-subscribe (MQTT spec 3.1.2.4)
 async def conn_han(client):
     await client.subscribe('foo_topic', 1)
-
+    await client.subscribe('home/kotlownia/bufor', 0)
 
 
 async def frame_update_async():
@@ -458,15 +470,15 @@ async def simple_watchdog():
     import machine
     temp_counter = 0
     while True:
-        
+    
         while counter == 0:
-            await asyncio.sleep(60) #wait 1 minute - if counter is 0 (no MQTT frames )
+            await asyncio.sleep(60*3) #wait 1 minute - if counter is 0 (no MQTT frames )
             if counter == 0:
                 clear_framebuffers()
                 
                 for i in range (9):
                   test_writer.set_textpos(my_text_display,10 , 170 )
-                  test_writer.printstring("brak połączenia przez okres 1 minuty przy starcie, restart systemu") 
+                  test_writer.printstring("brak połączenia przez okres 3 minut przy starcie, restart systemu") 
                 frame_update()
                 machine.reset()
 
@@ -480,7 +492,7 @@ async def simple_watchdog():
                 test_writer.set_textpos(my_text_display,170, 10 + i * 14)
                 test_writer.printstring("brak nowych MQTT w ciągu 10 minut, restart systemu") 
             frame_update()
-                
+            print("reset from simple watchdog")  
             machine.reset() #if there is no new mqtt message - reset - but in the future it should be error handling (mqtt server maybe down etc)
 
 
@@ -503,7 +515,7 @@ async def main(client):
         print("ESP32 reset")
    
     n = 0
-    await client.subscribe('home/kotlownia/bufor', 0)
+    #await client.subscribe('home/kotlownia/bufor', 0)
     #await client.subscribe('home/OMG_ESP32_BLE/BTtoMQTT/A4C138F53164', 0)
     #await client.subscribe('home/OMG_ESP32_BLE/BTtoMQTT/A4C138D1110F', 0)
     #await client.subscribe('home/OMG_ESP32_BLE/BTtoMQTT/A4C138425C0D', 0)
@@ -516,17 +528,18 @@ async def main(client):
         await client.publish('result', '{} repubs: {} outages: {}'.format(n, client.REPUB_COUNT, outages), qos = 1)
         n += 1
         await client.wait_msg()
-        await client._keep_connected()
+        #await client._keep_connected()
         
         
 
 # Define configuration
 config['subs_cb'] = sub_cb
 config['wifi_coro'] = wifi_han
-#config['connect_coro'] = conn_han
+config['connect_coro'] = conn_han
 config['clean'] = False
 config['will'] = ('result', 'Goodbye cruel world', False, 0 )
 config['keepalive'] = 120
+config['response_time'] = 30 #3*10 init value, nymea system too slow?
 
 #init gui update
 clear_framebuffers() #without it screen is red - to investigate
@@ -549,10 +562,16 @@ asyncio.create_task(frame_update_async())
 
 try:
     asyncio.run(main(client))
+
+except OSError as e:
+        print("OSError:", e)
+except Exception as e:
+        print("exception error:", e)
 finally:
     client.close()  # Prevent LmacRxBlk:1 errors
     asyncio.new_event_loop() #this works? 
     import machine
+    print("reset from the main loop")
     machine.reset() #this should work in case if everything is not working (OSErrors etc)
 
 
