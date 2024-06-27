@@ -4,6 +4,8 @@
 """
 
 import epaper4in2
+
+
 from machine import Pin, SPI
 
 # SPIV on ESP32
@@ -47,8 +49,12 @@ def clear_framebuffers():
 
 
 def clear_screen():
-	clear_framebuffers()
-	e.display_frame(buf_black, buf_red)
+    
+    e.reset()
+    e.init()
+    clear_framebuffers()
+    e.display_frame(buf_black, buf_red)
+    e.sleep()
 
 
 black = 0
@@ -87,7 +93,7 @@ from mqtt_as import MQTTClient
 from mqtt_local import wifi_led, blue_led, config
 import uasyncio as asyncio
 import json
-import struct
+
 
 outages = 0
 temp = []
@@ -98,6 +104,7 @@ from writer import Writer
 import font42_bufferload
 import font12_temperature
 import font15_testall
+#import font3Mono
 #getting bigger font using Writer class and some code from the internet
 class NotionalDisplay(framebuf.FrameBuffer):
     def __init__(self, width, height,buffer):
@@ -109,6 +116,9 @@ class NotionalDisplay(framebuf.FrameBuffer):
     def show():
         ...
 
+
+     
+
 my_text_display = NotionalDisplay(400, 300, buf_black)
 my_text_display_red = NotionalDisplay(400, 300,buf_red)
 wri = Writer(my_text_display, font42_bufferload)
@@ -116,6 +126,15 @@ writer_temperatures = Writer(my_text_display, font12_temperature)
 test_writer = Writer(my_text_display, font15_testall)
 writer_red_power = Writer(my_text_display_red, font15_testall)
 writer_temperatures_red = Writer(my_text_display_red, font12_temperature)
+#loading too much objects create issue with wifi startup
+
+def eink_debug_print(string_to_print, row, column, color):
+     e.reset()
+     e.init()
+     test_writer.set_clip(row, column)
+     test_writer.printstring(string_to_print)
+     frame_update()
+     e.sleep()
 
 def writer_print_text_temperatures(string_to_print, row, column, color):
     
@@ -150,11 +169,12 @@ def show_temperature_and_load_difference(previous_meas_dict,global_dict_sensors)
 
           for sensors, values in sorted(previous_meas_dict.items()):
             print(sensors, values)
-            if 'temp' in sensors:
-                temp_difference = global_dict_sensors[sensors] - previous_meas_dict[sensors]  
-                print(f'{temp_difference}C diff')
-                temperature_diff[sensors]=temp_difference 
-                average_temp_change += temp_difference/9
+            if 'temp' in sensors: 
+                   if 'solar' not in sensors: #to be refactored
+                     temp_difference = global_dict_sensors[sensors] - previous_meas_dict[sensors]  
+                     print(f'{temp_difference}C diff')
+                     temperature_diff[sensors]=temp_difference 
+                     average_temp_change += temp_difference/9
           
           a = 'kWh'
           #1% - 0,628kWh
@@ -164,17 +184,81 @@ def show_temperature_and_load_difference(previous_meas_dict,global_dict_sensors)
           print(f'Percent_diff:{percent_diff:.2f}%')
          
           
-          i = 0
-          for temperature, value in sorted(temperature_diff.items()):
+          #i = 0
+          #for temperature, value in sorted(temperature_diff.items()):
             
-            print_and_color_temp_diffs(value, f'{value:.2f}°C', 20 + i, 270)
-            i = i + 18
+           # print_and_color_temp_diffs(value, f'{value:.2f}°C', 20 + i, 270)
+           # i = i + 18
           
           print_and_color_temp_diffs(percent_diff, f'{percent_diff:.2f}%', 200, 270)
-          print_and_color_temp_diffs(kwh_change, f'{kwh_change:.2f}kWh', 215, 270)
-          print_and_color_temp_diffs(average_temp_change, f'{average_temp_change:.2f}°C',  262 , 10)
-       
-         
+          #print_and_color_temp_diffs(kwh_change, f'{kwh_change:.2f}kWh', 215, 270)
+          #print_and_color_temp_diffs(average_temp_change, f'{average_temp_change:.2f}°C',  262 , 10)
+
+buffer_sensors_dict = {
+     'temp1': 0,
+     'temp2': 0,
+     'temp3': 0,
+     'temp4': 0,
+     'temp5': 0,
+     'temp6': 0,
+     'temp7': 0,
+     'temp8': 0,
+     'kWh'  : 0,
+     'load_percent': 0,
+     'power': 0
+
+}
+
+solar_sensors_dict = {
+      'solar_T0': 0, 
+      'solar_T1': 0, 
+      'solar_T2': 0,
+      'solar_T3': 0
+}      
+
+
+
+def solar_indicator(solar_dict):
+     
+     x_pos = 265
+     y_pos = 15
+     solar_width = 120
+     solar_height = 70
+     temperature_correction = [0, 0, 2,0]
+     
+
+    
+     framebuffer.rect(x_pos, y_pos, solar_width, solar_height, "black")
+     framebuffer.rect(x_pos + 1, y_pos + 1, solar_width - 2, solar_height - 2, "red")
+
+     t_spacing = int((solar_width - font15_testall.max_width()*2)/3)
+     #print all temps in once
+     for i in range(4):
+        test_writer.set_textpos(my_text_display,y_pos-14, x_pos + i*t_spacing)
+        test_writer.printstring(f'T{i}', True)
+    
+     t_spacing = int((solar_width - font15_testall.max_width()*3)/3)
+     
+     for i in range(4):
+        test_writer.set_textpos(my_text_display,y_pos+2, 2+  x_pos + i*t_spacing)
+        key = f'solar_T{i}'
+        value = solar_dict[key] + temperature_correction[i]
+        test_writer.printstring(f'{int(value)}°', True)
+
+     test_writer.set_textpos(my_text_display, 39, 300)
+     test_writer.printstring("solar", True)
+
+     #vertical lines simulating panels separation
+     framebuffer.vline(x_pos + int(solar_width/3), y_pos, solar_height, "red")
+     framebuffer.vline(x_pos + int(solar_width*2/3), y_pos, solar_height, "red")
+     
+
+
+
+def update_sensors_dict(dSourceSensors, dDestinationSensors): #risky - for now no handling if something is not definied 
+     for sensor, value in dDestinationSensors.items():
+          dDestinationSensors[sensor] = dSourceSensors[sensor]
+
 def buffer_indicator(buffer_dict):
         
         temperatures_dict = {}
@@ -184,11 +268,13 @@ def buffer_indicator(buffer_dict):
         for sensors, values in sorted(buffer_dict.items()):
             print(sensors, values)
             if 'temp' in sensors:
-                temperatures_dict[sensors]=int(values)
+                if 'solar' not in sensors: #quick workaround for added sensor
+                    temperatures_dict[sensors]=int(values)
         
         screen_width = 400
         screen_height = 300
         
+
         screen_horizontal_middle = screen_width/2
 
         i = 0
@@ -202,16 +288,23 @@ def buffer_indicator(buffer_dict):
         buffer_x, buffer_y = int(screen_horizontal_middle - buffer_tempbar_width/2), 20
         #printing temperature values and creating temperature bars
         for temp_sens, value in sorted(temperatures_dict.items()):
-            
+           
             framebuffer.rect(buffer_x + 1,buffer_y+i+1, int(((value - lower_tempC)/delta_tempC)*buffer_tempbar_width), buffer_tempbar_height - 1,'red', True )
             #test - using writer class to show temperatures (works fine)
             writer_temperatures.set_textpos(my_text_display, buffer_y + i, buffer_x-40)
             writer_temperatures.printstring(f'{value}°C',True)
             i = i + buffer_tempbar_height
-            average_temperature += value/9
+            average_temperature += value/8
         
-        writer_temperatures.set_textpos(my_text_display, 250, 10)
-        writer_temperatures.printstring(f'{int(average_temperature)}°C',True)
+        column = 270
+
+        test_writer.set_textpos(my_text_display, 100, column)
+        test_writer.printstring('średnia',True)
+        test_writer.set_textpos(my_text_display, 120, column)
+        test_writer.printstring('temperatura:',True)
+
+        wri.set_textpos(my_text_display, 140, column)
+        wri.printstring(f'{int(average_temperature)}°C',True)
         
         bar_thickness = 2
 
@@ -236,6 +329,8 @@ def buffer_indicator(buffer_dict):
         for layer in range(bar_thickness-3):
             framebuffer.rect(load_buffer_x_pos-layer, load_bufer_y_pos-layer, bar_width+layer*2, bar_height+layer*2, 'white', False) #black frame #1
         
+       
+
         red_bar_width = int(bar_width * (percent_value/100))
         framebuffer.rect(load_buffer_x_pos+1, load_bufer_y_pos+1, red_bar_width, bar_height-2, 'red', True)
         
@@ -262,7 +357,18 @@ def buffer_indicator(buffer_dict):
         writer_col_pos = 160 
         wri.set_textpos(my_text_display, writer_row_pos, writer_col_pos)
         wri.printstring(f'{percent_value}%', True)
-     
+
+def GUI_update():
+     global solar_sensors_dict
+     global buffer_sensors_dict
+     global global_dict_sensors
+
+     #buffer_sensors_dict = global_dict_sensors #how it is working if global_dict_sensors is not definied here?
+     #update_sensors_dict(global_dict_sensors, buffer_sensors_dict)
+     #update_sensors_dict(global_dict_sensors, solar_sensors_dict)
+
+     buffer_indicator(buffer_sensors_dict)
+     solar_indicator(solar_sensors_dict)   #to be changed after refactor  
      
 counter = 0
     
@@ -285,13 +391,18 @@ def sub_cb(topic, msg, retained):
         print(temp_dict)
         global_dict_sensors = temp_dict  #copy it to the global dict (temp solution)
         framebuffer.fill('white')          
-        buffer_indicator(temp_dict)
-        print(counter)
-        if counter == 0:
+        if counter == 0: #before GUI update - to prevent from unwanted resets because of bug in buffer_ind
              asyncio.create_task(frame_first_update())
         counter += 1
+        update_sensors_dict(global_dict_sensors, buffer_sensors_dict)
+        update_sensors_dict(global_dict_sensors, solar_sensors_dict)
+        GUI_update()
+        #buffer_indicator(temp_dict)
+        print(counter)
+        
         
 async def frame_first_update():
+     await asyncio.sleep(1) # wait a second
      e.reset()
      e.init()
      current_time = time.localtime()
@@ -299,6 +410,9 @@ async def frame_first_update():
      framebuffer.text(formatted_time, 300, 270,'red')
      frame_update()
      e.sleep()
+
+async def frame_clear_async():
+     clear_screen()
 
 # Demonstrate scheduler is operational.
 async def heartbeat():
@@ -310,18 +424,22 @@ async def heartbeat():
 
 async def wifi_han(state):
     global outages
+    global counter
     wifi_led(not state)
     if state:
         print('WiFi is up.')
     else:
         outages += 1
         print('WiFi is down.')
+        print(f'wifi han state: {state}')
+        asyncio.create_task(frame_clear_async())
+        counter = 0 #reset counter, to show dipslay if mqtt is reestablished
     await asyncio.sleep(1)
     
 # If you connect with clean_session True, must re-subscribe (MQTT spec 3.1.2.4)
 async def conn_han(client):
     await client.subscribe('foo_topic', 1)
-
+    await client.subscribe('home/kotlownia/bufor', 0)
 
 
 async def frame_update_async():
@@ -329,12 +447,12 @@ async def frame_update_async():
           global counter
           while (counter == 0):
               print("waiting for first mqtt frame ")
-              await asyncio.sleep(1)
+              await asyncio.sleep(5)
 
 
           print("async frame update")
           previous_meas_dict = global_dict_sensors
-
+          # TODO - check timings here and flow
           minutes_to_wait = 5
           await asyncio.sleep(60*minutes_to_wait)
           e.reset()
@@ -363,29 +481,30 @@ async def simple_watchdog():
     import machine
     temp_counter = 0
     while True:
-        
+    # TODO - here everything is to be refactored, it is not clear at all
         while counter == 0:
-            await asyncio.sleep(60) #wait 1 minute - if counter is 0 (no MQTT frames )
+            await asyncio.sleep(60*3) #wait 1 minute - if counter is 0 (no MQTT frames )
             if counter == 0:
                 clear_framebuffers()
                 
                 for i in range (9):
                   test_writer.set_textpos(my_text_display,10 , 170 )
-                  test_writer.printstring("brak połączenia przez okres 1 minuty przy starcie, restart systemu") 
+                  test_writer.printstring("brak połączenia przez okres 3 minut przy starcie, restart systemu") 
                 frame_update()
+                print("reset after 3min from startup - no mqtt")
                 machine.reset()
 
-        temp_counter = counter
+        temp_counter = counter # TODO: check if this makes sense at all
 
         await asyncio.sleep(60*10)
         if counter == temp_counter:
-                
+            # TODO clean this up     
             clear_framebuffers()
             for i in range (9):
                 test_writer.set_textpos(my_text_display,170, 10 + i * 14)
                 test_writer.printstring("brak nowych MQTT w ciągu 10 minut, restart systemu") 
             frame_update()
-                
+            print("reset from simple watchdog")  
             machine.reset() #if there is no new mqtt message - reset - but in the future it should be error handling (mqtt server maybe down etc)
 
 
@@ -398,21 +517,18 @@ async def main(client):
     except OSError:
         print('Connection failed.')
         clear_framebuffers()
-                
+           
         for i in range (9):
-            test_writer.set_textpos(my_text_display,170, 10 + i * 14)
-            test_writer.printstring("brak połączenia przez okres 1 minuty przy starcie, restart systemu") 
-        frame_update()
+            test_writer.set_textpos(my_text_display,10 + i * 14, 20 )
+            test_writer.printstring("brak połączenia przez okres 1 minuty przy starcie, restart systemu\n") 
+        #frame_update()
+        asyncio.create_task(frame_clear_async())
         import machine
         machine.reset()
-        print("ESP32 reset")
-   
+        #print("ESP32 reset")
+        # TODO - proper handling of this error - it just stays here (without reset)
     n = 0
-    await client.subscribe('home/kotlownia/bufor', 0)
-    #await client.subscribe('home/OMG_ESP32_BLE/BTtoMQTT/A4C138F53164', 0)
-    #await client.subscribe('home/OMG_ESP32_BLE/BTtoMQTT/A4C138D1110F', 0)
-    #await client.subscribe('home/OMG_ESP32_BLE/BTtoMQTT/A4C138425C0D', 0)
-    #await client.subscribe('home/OMG_ESP32_BLE/BTtoMQTT/A4C138250A06', 0)
+   
     
     while True:
         await asyncio.sleep(5)
@@ -420,34 +536,64 @@ async def main(client):
         # If WiFi is down the following will pause for the duration.
         await client.publish('result', '{} repubs: {} outages: {}'.format(n, client.REPUB_COUNT, outages), qos = 1)
         n += 1
-        await client.wait_msg()
-        await client._keep_connected()
+        # after 3 publish there is wifi down
+        #await client.wait_msg()
+        #await client._keep_connected()
+          
+        # get the current task
+        task = asyncio.current_task()
+        # report its details
+        print(task)
         
         
 
 # Define configuration
 config['subs_cb'] = sub_cb
 config['wifi_coro'] = wifi_han
-#config['connect_coro'] = conn_han
+config['connect_coro'] = conn_han
 config['clean'] = False
 config['will'] = ('result', 'Goodbye cruel world', False, 0 )
 config['keepalive'] = 120
-
+config['response_time'] = 90 # TODO - what is the function
+#increasing response time fixed issue with disconnecting wifi
+#init gui update
+clear_framebuffers() # TODO without it screen is red - to investigate
+GUI_update()
+frame_update()
 # Set up client
 MQTTClient.DEBUG = True  # Optional
+
+#setup client is the most buggy - so watchdogs will be setup here (test)
+
+
 client = MQTTClient(config)
 
-asyncio.create_task(reset_system())
+#asyncio.create_task(reset_system())
+#asyncio.create_task(simple_watchdog())
+
 asyncio.create_task(heartbeat())
 asyncio.create_task(frame_update_async())
-asyncio.create_task(simple_watchdog())
+
 
 
 try:
     asyncio.run(main(client))
+
+except OSError as e:
+        print("OSError:", e)
+        eink_debug_print(e, 1, 1, "black")
+        # TODO handling of those errors - when I ctr-c repl, then it goes straight to reset point
+except Exception as e:
+        print("exception error:", e)
+        eink_debug_print(e, 50, 1, "red")
 finally:
     client.close()  # Prevent LmacRxBlk:1 errors
-    asyncio.new_event_loop()
-
-
+    asyncio.new_event_loop() #this works? 
+    import machine
+    print("reset from the main loop")
+    #machine.reset() #this should work in case if everything is not working (OSErrors etc)
+# TODO displaying errors on eink
+# TODO sending and subscribing same topic as closed loop
+# TODO if ecu is close to router, it keeps going blank (wifi is down)
         
+# TODO if there is no connection over long period of time - screen should be cleared once per hour

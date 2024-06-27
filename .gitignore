@@ -2,3 +2,6 @@
 #some cache from python and generated .png files
 testfolder/
 __pycache__/
+ESP32_eink/secrets_etc.py
+ESP32/webrepl_cfg.py
+private.py
