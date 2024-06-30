@@ -205,7 +205,8 @@ buffer_sensors_dict = {
      'temp8': 0,
      'kWh'  : 0,
      'load_percent': 0,
-     'power': 0
+     'power': 0,
+     'update_time' : ''
 
 }
 
@@ -357,6 +358,17 @@ def buffer_indicator(buffer_dict):
         writer_col_pos = 160 
         wri.set_textpos(my_text_display, writer_row_pos, writer_col_pos)
         wri.printstring(f'{percent_value}%', True)
+        
+        row = 140
+        test_writer.set_textpos(my_text_display, row+20, 10)
+        test_writer.printstring('ostatnia',True)
+        test_writer.set_textpos(my_text_display, row+40, 10)
+        test_writer.printstring('aktualizacja:',True)
+
+        test_writer.set_textpos(my_text_display, row + 60, 10)
+        test_writer.printstring(buffer_sensors_dict['update_time'],True)
+
+        
 
 def GUI_update():
      global solar_sensors_dict
