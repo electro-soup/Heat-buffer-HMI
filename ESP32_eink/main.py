@@ -105,7 +105,9 @@ import font42_bufferload
 import font12_temperature
 import font15_testall
 #import font3Mono
+
 #getting bigger font using Writer class and some code from the internet
+
 class NotionalDisplay(framebuf.FrameBuffer):
     def __init__(self, width, height,buffer):
         self.width = width
@@ -131,7 +133,7 @@ writer_temperatures_red = Writer(my_text_display_red, font12_temperature)
 def eink_debug_print(string_to_print, row, column, color):
      e.reset()
      e.init()
-     test_writer.set_clip(row, column)
+     test_writer.set_textpos(row, column)
      test_writer.printstring(string_to_print)
      frame_update()
      e.sleep()
@@ -426,6 +428,7 @@ async def frame_first_update():
 async def frame_clear_async():
      clear_screen()
 
+
 # Demonstrate scheduler is operational.
 async def heartbeat():
     s = True
@@ -548,14 +551,10 @@ async def main(client):
         # If WiFi is down the following will pause for the duration.
         await client.publish('result', '{} repubs: {} outages: {}'.format(n, client.REPUB_COUNT, outages), qos = 1)
         n += 1
-        # after 3 publish there is wifi down
-        #await client.wait_msg()
-        #await client._keep_connected()
+        watchdog.feed()
+     
           
-        # get the current task
-        task = asyncio.current_task()
-        # report its details
-        print(task)
+        
         
         
 
@@ -587,7 +586,8 @@ asyncio.create_task(heartbeat())
 asyncio.create_task(frame_update_async())
 
 
-
+from machine import WDT
+watchdog = WDT(timeout = 60000)
 try:
     asyncio.run(main(client))
 
