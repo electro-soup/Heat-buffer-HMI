@@ -20,8 +20,8 @@ rst = Pin(26)		#WHITE
 busy = Pin(25)		#VIOLET
 spi = SPI(1, baudrate=20000000, polarity=0, phase=0, sck=sck, miso=miso, mosi=mosi)
 
-e = epaper4in2.EPD(spi, cs, dc, rst, busy)
-e.init()
+eink_display = epaper4in2.EPD(spi, cs, dc, rst, busy)
+eink_display.init()
 
 w = 400
 h = 300
@@ -36,6 +36,14 @@ import framebuf
 buf_black = bytearray(w * h // 8)
 buf_red = bytearray(w * h // 8)
 
+
+def eink_init_deinit_execute(callback):
+    eink_display.reset()
+    eink_display.init()
+    callback()
+    eink_display.display_frame(buf_black, buf_red)
+    eink_display.sleep()
+
 #creating two buffers, one for black, second for red pixels
 fb_black = framebuf.FrameBuffer(buf_black, w, h, framebuf.MONO_HLSB)
 fb_red = framebuf.FrameBuffer(buf_red, w, h, framebuf.MONO_HLSB)
@@ -49,13 +57,7 @@ def clear_framebuffers():
 
 
 def clear_screen():
-    
-    e.reset()
-    e.init()
-    clear_framebuffers()
-    e.display_frame(buf_black, buf_red)
-    e.sleep()
-
+     eink_init_deinit_execute(clear_framebuffers)
 
 black = 0
 white = 1
@@ -66,7 +68,7 @@ from ThreeColorFrameBuffer import ThreeColorFrameBuffer
 framebuffer = ThreeColorFrameBuffer(400, 300, fb_black, fb_red)
 
 def frame_update():
-    e.display_frame(buf_black,buf_red)
+    eink_display.display_frame(buf_black,buf_red)
     print("frame update")
      
 #how to handle arrays 
@@ -123,7 +125,7 @@ class NotionalDisplay(framebuf.FrameBuffer):
 
 my_text_display = NotionalDisplay(400, 300, buf_black)
 my_text_display_red = NotionalDisplay(400, 300,buf_red)
-wri = Writer(my_text_display, font42_bufferload)
+
 writer_temperatures = Writer(my_text_display, font12_temperature)
 test_writer = Writer(my_text_display, font15_testall)
 writer_red_power = Writer(my_text_display_red, font15_testall)
@@ -157,26 +159,16 @@ class ColorWriter(Writer):
 
 color_writer = ColorWriter(my_text_display, my_text_display_red, font15_testall) 
 
+
 def eink_debug_print(string_to_print, row, column, color):
-     e.reset()
-     e.init()
+     eink_display.reset()
+     eink_display.init()
      
      color_writer.print(string_to_print, row, column, color, font15_testall)
      frame_update()
-     e.sleep()
+     eink_display.sleep()
 
-def writer_print_text_temperatures(string_to_print, row, column, color):
-    
-    writer_temperatures.set_textpos(my_text_display, row, column)
-    writer_temperatures_red.set_textpos(my_text_display_red, row, column)
-    writer_temperatures.printstring('',True)
-    writer_temperatures_red.printstring('',True) #clear both colors at the beginning
-    
-    if color == 'red':
-                writer_temperatures_red.printstring(string_to_print,True)
-    
-    if color == 'black':
-                writer_temperatures.printstring(string_to_print,True)
+
     
 def print_and_color_temp_diffs(value, format_string, row, column): #positive values - "+" and red, negative - black and "-"
 
@@ -214,17 +206,9 @@ def show_temperature_and_load_difference(previous_meas_dict,global_dict_sensors)
           percent_diff = (kwh_change)/0.628 
           
           print(f'Percent_diff:{percent_diff:.2f}%')
-         
-          
-          #i = 0
-          #for temperature, value in sorted(temperature_diff.items()):
-            
-           # print_and_color_temp_diffs(value, f'{value:.2f}°C', 20 + i, 270)
-           # i = i + 18
-          
+
           print_and_color_temp_diffs(percent_diff, f'{percent_diff:.2f}%', 200, 270)
-          #print_and_color_temp_diffs(kwh_change, f'{kwh_change:.2f}kWh', 215, 270)
-          #print_and_color_temp_diffs(average_temp_change, f'{average_temp_change:.2f}°C',  262 , 10)
+     
 
 buffer_sensors_dict = {
      'temp1': 0,
@@ -448,13 +432,12 @@ def sub_cb(topic, msg, retained):
         
 async def frame_first_update():
      await asyncio.sleep(1) # wait a second
-     e.reset()
-     e.init()
-     current_time = time.localtime()
-     formatted_time = "{:02}:{:02}:{:02}".format(current_time[3], current_time[4], current_time[5])
-     framebuffer.text(formatted_time, 300, 270,'red')
-     frame_update()
-     e.sleep()
+     def local_time():
+        current_time = time.localtime()
+        formatted_time = "{:02}:{:02}:{:02}".format(current_time[3], current_time[4], current_time[5])
+        framebuffer.text(formatted_time, 300, 270,'red')
+
+     eink_init_deinit_execute(local_time)
 
 async def frame_clear_async():
      clear_screen()
@@ -501,8 +484,8 @@ async def frame_update_async():
           # TODO - check timings here and flow
           minutes_to_wait = 5
           await asyncio.sleep(60*minutes_to_wait)
-          e.reset()
-          e.init()
+          eink_display.reset()
+          eink_display.init()
 
           show_temperature_and_load_difference(previous_meas_dict,global_dict_sensors)
         
@@ -511,7 +494,7 @@ async def frame_update_async():
           formatted_time = "{:02}:{:02}:{:02}".format(current_time[3], current_time[4], current_time[5])
           framebuffer.text(formatted_time, 300, 270,'red')
           frame_update()
-          e.sleep()
+          eink_display.sleep()
 
 #temp function to reset system if there is no proper error handling coded
 async def reset_system():
@@ -553,8 +536,6 @@ async def simple_watchdog():
             print("reset from simple watchdog")  
             machine.reset() #if there is no new mqtt message - reset - but in the future it should be error handling (mqtt server maybe down etc)
 
-
-    
 
 async def main(client):
     try:
@@ -621,13 +602,13 @@ watchdog = WDT(timeout = 1000 * 60 * minutes)
 try:
     asyncio.run(main(client))
 
-except OSError as e:
-        print("OSError:", e)
-        eink_debug_print(e, 1, 1, "black")
+except OSError as eink_display:
+        print("OSError:", eink_display)
+        eink_debug_print(eink_display, 1, 1, "black")
         # TODO handling of those errors - when I ctr-c repl, then it goes straight to reset point
-except Exception as e:
-        print("exception error:", e)
-        eink_debug_print(e, 50, 1, "red")
+except Exception as eink_display:
+        print("exception error:", eink_display)
+        eink_debug_print(eink_display, 50, 1, "red")
 finally:
     client.close()  # Prevent LmacRxBlk:1 errors
     asyncio.new_event_loop() #this works? 
