@@ -134,19 +134,24 @@ class ColorWriter(Writer):
      def __init__(self, device_black, device_red, font, verbose=True):
           self.black_fb = device_black
           self.red_fb = device_red
-          self.font = font
-          self.black = super().__init__(self.black_fb, self.font, verbose)
-          self.red = super().__init__(self.red_fb, self.font, verbose)
+          self.font = font #default font
+          self.black_writer = Writer(self.black_fb, self.font, verbose)
+          self.red_writer =  Writer(self.red_fb, self.font, verbose)
 
-     def print(self, text, row, column, color):
-          if color == 'black':
-               self.black_fb.set_textpos(self.black_fb, row, column) #it is quite possible that there is only framebuffer to be changed
-               self.black_fb.printstring(text, True)
-          if color == 'red':
-               self.red_fb.set_textpos(self.red_fb,row,column)
-               self.red_fb.printstring(text, True)
-
+     def print(self, text, row, column, color, font = None):
         
+          if color == 'black':
+               if font is not None:
+                    self.black_writer.font = font
+               self.black_writer.set_textpos(self.black_fb, row, column) #it is quite possible that there is only framebuffer to be changed
+               self.black_writer.printstring(text, True)
+          if color == 'red':
+               if font is not None:
+                    self.red_writer.font = font
+               self.red_writer.set_textpos(self.red_fb,row,column)
+               self.red_writer.printstring(text, True)
+
+color_writer = ColorWriter(my_text_display, my_text_display_red, font15_testall) 
 
 def eink_debug_print(string_to_print, row, column, color):
      e.reset()
@@ -605,7 +610,8 @@ asyncio.create_task(frame_update_async())
 
 
 from machine import WDT
-watchdog = WDT(timeout = 60000)
+minutes = 20
+watchdog = WDT(timeout = 1000 * 60 * minutes)
 try:
     asyncio.run(main(client))
 
