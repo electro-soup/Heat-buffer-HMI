@@ -104,7 +104,7 @@ from writer import Writer
 import font42_bufferload
 import font12_temperature
 import font15_testall
-#import font3Mono
+import font3Mono
 
 #getting bigger font using Writer class and some code from the internet
 
@@ -180,14 +180,17 @@ def writer_print_text_temperatures(string_to_print, row, column, color):
     
 def print_and_color_temp_diffs(value, format_string, row, column): #positive values - "+" and red, negative - black and "-"
 
+    color_writer.set_font(font12_temperature)
+    
     if value > 0:
-         writer_print_text_temperatures('+' + format_string, row, column, "red")
-
+         color_writer.print('+' + format_string, row, column, "red")
+         
     if value < 0:
-         writer_print_text_temperatures(format_string, row, column, "black")
-
+         color_writer.print('+' + format_string, row, column, "black")
+        
     if value == 0:
-        writer_print_text_temperatures("", row, column, "")
+        color_writer("", row, column)
+        
   
 def show_temperature_and_load_difference(previous_meas_dict,global_dict_sensors):
         
@@ -316,12 +319,15 @@ def buffer_indicator(buffer_dict):
         
         buffer_x, buffer_y = int(screen_horizontal_middle - buffer_tempbar_width/2), 20
         #printing temperature values and creating temperature bars
+
+        color_writer.set_font(font12_temperature)
+
         for temp_sens, value in sorted(temperatures_dict.items()):
            
             framebuffer.rect(buffer_x + 1,buffer_y+i+1, int(((value - lower_tempC)/delta_tempC)*buffer_tempbar_width), buffer_tempbar_height - 1,'red', True )
             #test - using writer class to show temperatures (works fine)
-            writer_temperatures.set_textpos(my_text_display, buffer_y + i, buffer_x-40)
-            writer_temperatures.printstring(f'{value}°C',True)
+            color_writer.print(f'{value}°C',buffer_y + i, buffer_x-40 )
+        
             i = i + buffer_tempbar_height
             average_temperature += value/8
         
@@ -379,23 +385,21 @@ def buffer_indicator(buffer_dict):
              framebuffer.vline(load_buffer_x_pos + vline_pos, load_bufer_y_pos+1,bar_height, color)
              framebuffer.vline(load_buffer_x_pos + vline_pos+1, load_bufer_y_pos+1,bar_height, color)
 
-         
-        writer_red_power.set_textpos(my_text_display_red, 250, 300)
-        writer_red_power.printstring(f"moc: {actual_power}W",True) 
+        color_writer.set_font(font15_testall)
+        color_writer.print(f"moc: {actual_power}W", 250, 300)
+      
         #big fonted percent value 
         writer_row_pos = 195
         writer_col_pos = 160 
-        wri.set_textpos(my_text_display, writer_row_pos, writer_col_pos)
-        wri.printstring(f'{percent_value}%', True)
+        color_writer.set_font(font42_bufferload)
+        color_writer.print(f'{percent_value}%',writer_row_pos, writer_col_pos )
+       
         
+        color_writer.set_font(font15_testall)
         row = 140
-        test_writer.set_textpos(my_text_display, row+20, 10)
-        test_writer.printstring('ostatnia',True)
-        test_writer.set_textpos(my_text_display, row+40, 10)
-        test_writer.printstring('aktualizacja:',True)
-
-        test_writer.set_textpos(my_text_display, row + 60, 10)
-        test_writer.printstring(buffer_sensors_dict['update_time'],True)
+        color_writer.print('ostatnia', row + 20, 10)
+        color_writer.print('aktualizacja:', row + 40, 10)
+        color_writer.print(buffer_sensors_dict['update_time'],row + 60, 10)
 
         
 
