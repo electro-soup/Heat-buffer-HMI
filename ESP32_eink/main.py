@@ -130,6 +130,24 @@ writer_red_power = Writer(my_text_display_red, font15_testall)
 writer_temperatures_red = Writer(my_text_display_red, font12_temperature)
 #loading too much objects create issue with wifi startup
 
+class ColorWriter(Writer):
+     def __init__(self, device_black, device_red, font, verbose=True):
+          self.black_fb = device_black
+          self.red_fb = device_red
+          self.font = font
+          self.black = super().__init__(self.black_fb, self.font, verbose)
+          self.red = super().__init__(self.red_fb, self.font, verbose)
+
+     def print(self, text, row, column, color):
+          if color == 'black':
+               self.black_fb.set_textpos(self.black_fb, row, column) #it is quite possible that there is only framebuffer to be changed
+               self.black_fb.printstring(text, True)
+          if color == 'red':
+               self.red_fb.set_textpos(self.red_fb,row,column)
+               self.red_fb.printstring(text, True)
+
+        
+
 def eink_debug_print(string_to_print, row, column, color):
      e.reset()
      e.init()
