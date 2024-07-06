@@ -138,7 +138,7 @@ class ColorWriter(Writer):
           self.black_writer = Writer(self.black_fb, self.font, verbose)
           self.red_writer =  Writer(self.red_fb, self.font, verbose)
 
-     def print(self, text, row, column, color, font = None):
+     def print(self, text, row, column, color = 'black', font = None): #assume implicitly that black is used
         
           if color == 'black':
                if font is not None:
@@ -150,14 +150,18 @@ class ColorWriter(Writer):
                     self.red_writer.font = font
                self.red_writer.set_textpos(self.red_fb,row,column)
                self.red_writer.printstring(text, True)
+      
+     def set_font(self,font): #to avoid typing font if we are intent to use it consecutively in the code
+          self.black_writer.font = font
+          self.red_writer.font = font
 
 color_writer = ColorWriter(my_text_display, my_text_display_red, font15_testall) 
 
 def eink_debug_print(string_to_print, row, column, color):
      e.reset()
      e.init()
-     test_writer.set_textpos(row, column)
-     test_writer.printstring(string_to_print)
+     
+     color_writer.print(string_to_print, row, column, color, font15_testall)
      frame_update()
      e.sleep()
 
@@ -259,21 +263,20 @@ def solar_indicator(solar_dict):
 
      t_spacing = int((solar_width - font15_testall.max_width()*2)/3)
      #print all temps in once
+     
+     color_writer.set_font(font15_testall)
      for i in range(4):
-        test_writer.set_textpos(my_text_display,y_pos-14, x_pos + i*t_spacing)
-        test_writer.printstring(f'T{i}', True)
-    
+        color_writer.print(f'T{i}',y_pos-14,  x_pos + i*t_spacing )
+       
      t_spacing = int((solar_width - font15_testall.max_width()*3)/3)
      
      for i in range(4):
-        test_writer.set_textpos(my_text_display,y_pos+2, 2+  x_pos + i*t_spacing)
         key = f'solar_T{i}'
         value = solar_dict[key] + temperature_correction[i]
-        test_writer.printstring(f'{int(value)}°', True)
+        
+        color_writer.print(f'{int(value)}°', y_pos+2, x_pos + i*t_spacing)
 
-     test_writer.set_textpos(my_text_display, 39, 300)
-     test_writer.printstring("solar", True)
-
+     color_writer.print("solar", 39, 300)
      #vertical lines simulating panels separation
      framebuffer.vline(x_pos + int(solar_width/3), y_pos, solar_height, "red")
      framebuffer.vline(x_pos + int(solar_width*2/3), y_pos, solar_height, "red")
@@ -323,14 +326,15 @@ def buffer_indicator(buffer_dict):
             average_temperature += value/8
         
         column = 270
+        row = 100
+        color_writer.set_font(font15_testall)
 
-        test_writer.set_textpos(my_text_display, 100, column)
-        test_writer.printstring('średnia',True)
-        test_writer.set_textpos(my_text_display, 120, column)
-        test_writer.printstring('temperatura:',True)
-
-        wri.set_textpos(my_text_display, 140, column)
-        wri.printstring(f'{int(average_temperature)}°C',True)
+        color_writer.print('średnia', row, column)
+        color_writer.print('temperatura', row+20, column)
+        
+        color_writer.set_font(font42_bufferload)
+        color_writer.print(f'{int(average_temperature)}°C', row+40, column)
+        
         
         bar_thickness = 2
 
