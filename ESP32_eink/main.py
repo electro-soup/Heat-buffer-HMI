@@ -569,9 +569,8 @@ async def main(client):
             test_writer.printstring("brak połączenia przez okres 1 minuty przy starcie, restart systemu\n") 
         #frame_update()
         asyncio.create_task(frame_clear_async())
-        import machine
-        machine.reset()
-        #print("ESP32 reset")
+       
+     
         # TODO - proper handling of this error - it just stays here (without reset)
     n = 0
    
@@ -605,13 +604,11 @@ frame_update()
 # Set up client
 MQTTClient.DEBUG = True  # Optional
 
-#setup client is the most buggy - so watchdogs will be setup here (test)
+
 
 
 client = MQTTClient(config)
 
-#asyncio.create_task(reset_system())
-#asyncio.create_task(simple_watchdog())
 
 asyncio.create_task(heartbeat())
 asyncio.create_task(frame_update_async())
@@ -620,6 +617,7 @@ asyncio.create_task(frame_update_async())
 from machine import WDT
 minutes = 20
 watchdog = WDT(timeout = 1000 * 60 * minutes)
+
 try:
     asyncio.run(main(client))
 
@@ -633,9 +631,7 @@ except Exception as e:
 finally:
     client.close()  # Prevent LmacRxBlk:1 errors
     asyncio.new_event_loop() #this works? 
-    import machine
-    print("reset from the main loop")
-    #machine.reset() #this should work in case if everything is not working (OSErrors etc)
+ 
 # TODO displaying errors on eink
 # TODO sending and subscribing same topic as closed loop
 # TODO if ecu is close to router, it keeps going blank (wifi is down)
