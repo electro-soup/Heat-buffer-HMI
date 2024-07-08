@@ -126,10 +126,9 @@ class NotionalDisplay(framebuf.FrameBuffer):
 my_text_display = NotionalDisplay(400, 300, buf_black)
 my_text_display_red = NotionalDisplay(400, 300,buf_red)
 
-writer_temperatures = Writer(my_text_display, font12_temperature)
 test_writer = Writer(my_text_display, font15_testall)
 writer_red_power = Writer(my_text_display_red, font15_testall)
-writer_temperatures_red = Writer(my_text_display_red, font12_temperature)
+
 #loading too much objects create issue with wifi startup
 
 class ColorWriter(Writer):
@@ -178,10 +177,13 @@ def print_and_color_temp_diffs(value, format_string, row, column): #positive val
          color_writer.print('+' + format_string, row, column, "red")
          
     if value < 0:
-         color_writer.print('+' + format_string, row, column, "black")
+         color_writer.print(format_string, row, column, "black")
         
     if value == 0:
-        color_writer("", row, column)
+        color_writer.print("", row, column, 'black')
+        color_writer.print("", row, column, 'red')
+    
+  
         
   
 def show_temperature_and_load_difference(previous_meas_dict,global_dict_sensors):
@@ -392,10 +394,6 @@ def GUI_update():
      global buffer_sensors_dict
      global global_dict_sensors
 
-     #buffer_sensors_dict = global_dict_sensors #how it is working if global_dict_sensors is not definied here?
-     #update_sensors_dict(global_dict_sensors, buffer_sensors_dict)
-     #update_sensors_dict(global_dict_sensors, solar_sensors_dict)
-
      buffer_indicator(buffer_sensors_dict)
      solar_indicator(solar_sensors_dict)   #to be changed after refactor  
      
@@ -414,12 +412,17 @@ def sub_cb(topic, msg, retained):
 
     if topic.decode() == 'home/kotlownia/bufor':
 
+        #test debug output with Mono3x3
+        color_writer.set_font(font3Mono)
         
+
         temp_msg = msg.decode()
         temp_dict = json.loads(temp_msg)
         print(temp_dict)
         global_dict_sensors = temp_dict  #copy it to the global dict (temp solution)
-        framebuffer.fill('white')          
+        framebuffer.fill('white')
+       
+
         if counter == 0: #before GUI update - to prevent from unwanted resets because of bug in buffer_ind
              asyncio.create_task(frame_first_update())
         counter += 1
@@ -428,6 +431,8 @@ def sub_cb(topic, msg, retained):
         GUI_update()
         #buffer_indicator(temp_dict)
         print(counter)
+
+        
         
         
 async def frame_first_update():
@@ -516,9 +521,7 @@ async def simple_watchdog():
             if counter == 0:
                 clear_framebuffers()
                 
-                for i in range (9):
-                  test_writer.set_textpos(my_text_display,10 , 170 )
-                  test_writer.printstring("brak połączenia przez okres 3 minut przy starcie, restart systemu") 
+                
                 frame_update()
                 print("reset after 3min from startup - no mqtt")
                 machine.reset()
@@ -529,9 +532,7 @@ async def simple_watchdog():
         if counter == temp_counter:
             # TODO clean this up     
             clear_framebuffers()
-            for i in range (9):
-                test_writer.set_textpos(my_text_display,170, 10 + i * 14)
-                test_writer.printstring("brak nowych MQTT w ciągu 10 minut, restart systemu") 
+           
             frame_update()
             print("reset from simple watchdog")  
             machine.reset() #if there is no new mqtt message - reset - but in the future it should be error handling (mqtt server maybe down etc)
