@@ -168,7 +168,7 @@ def eink_debug_print(string_to_print, row, column, color):
      
      color_writer.print(string_to_print, row, column, color, font15_testall)
      frame_update()
-     eink_display.sleep()
+     
 
 
     
@@ -537,7 +537,7 @@ async def frame_update_async():
           formatted_time = "{:02}:{:02}:{:02}".format(current_time[3], current_time[4], current_time[5])
           framebuffer.text(formatted_time, 300, 270,'red')
           frame_update()
-          eink_display.sleep()
+          
 
 #temp function to reset system if there is no proper error handling coded
 async def reset_system():
