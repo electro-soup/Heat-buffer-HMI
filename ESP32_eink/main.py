@@ -68,8 +68,11 @@ from ThreeColorFrameBuffer import ThreeColorFrameBuffer
 framebuffer = ThreeColorFrameBuffer(400, 300, fb_black, fb_red)
 
 def frame_update():
+    eink_display.reset()
+    eink_display.init()
     eink_display.display_frame(buf_black,buf_red)
     print("frame update")
+    eink_display.sleep()
      
 #how to handle arrays 
 #import array
@@ -175,9 +178,11 @@ def print_and_color_temp_diffs(value, format_string, row, column): #positive val
     
     if value > 0:
          color_writer.print('+' + format_string, row, column, "red")
+         draw_arrow(column+20, row, 30, 40, 'red')
          
     if value < 0:
          color_writer.print(format_string, row, column, "black")
+         draw_arrow(column+20, row, 30, 40, 'red', direction="down")
         
     if value == 0:
         color_writer.print("", row, column, 'black')
@@ -387,6 +392,39 @@ def buffer_indicator(buffer_dict):
         color_writer.print('aktualizacja:', row + 40, 10)
         color_writer.print(buffer_sensors_dict['update_time'],row + 60, 10)
 
+# some mingling with drawing assets as vectors
+def draw_arrow(x_pos, y_pos, width, height, color, fill = True, direction = 'up'):
+#how to handle arrays 
+#import array
+#myData = array.array('I', [10,10,120,30,30,61])
+#The coords must be specified as a array of integers, e.g. array('h', [x0, y0, x1, y1, ... xn, yn]).   
+     import array
+     #for now - very naive representation
+     x_zero_coord = 0
+     y_zero_coord = 0
+
+     y_middle = int(height/2)
+
+     if direction == 'down':
+        y_zero_coord = height
+        height = 0
+
+
+     points = [
+         (int(width/3), height),  #point_0
+         (int(width*2/3),height), #point_1
+         (int(width*2/3), y_middle), #point_2
+         (width, y_middle), #point_3
+         (int(width/2), y_zero_coord), #point_4
+         (x_zero_coord, y_middle), #point_5
+         (int(width/3), y_middle) #point_6
+        ]
+     # Rozpakowanie krotek do jednej listy
+     flattened_points = [value for point in points for value in point]
+     arrow_coords = array.array('h', flattened_points)
+     
+     framebuffer.poly(x_pos, y_pos, arrow_coords, color, fill)
+     
         
 
 def GUI_update():
