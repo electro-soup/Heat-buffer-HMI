@@ -182,7 +182,7 @@ def print_and_color_temp_diffs(value, format_string, row, column): #positive val
          
     if value < 0:
          color_writer.print(format_string, row, column, "black")
-         draw_arrow(column+20, row, 30, 40, 'red', direction="down")
+         draw_arrow(column+20, row, 30, 40, 'black', direction="down")
         
     if value == 0:
         color_writer.print("", row, column, 'black')
