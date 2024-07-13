@@ -255,14 +255,14 @@ def solar_indicator(solar_dict):
      framebuffer.rect(x_pos, y_pos, solar_width, solar_height, "black")
      framebuffer.rect(x_pos + 1, y_pos + 1, solar_width - 2, solar_height - 2, "red")
 
-     t_spacing = int((solar_width - font15_testall.max_width()*2)/3)
+     t_spacing = round((solar_width - font15_testall.max_width()*2)/3)
      #print all temps in once
      
      color_writer.set_font(font15_testall)
      for i in range(4):
         color_writer.print(f'T{i}',y_pos-14,  x_pos + i*t_spacing )
        
-     t_spacing = int((solar_width - font15_testall.max_width()*3)/3)
+     t_spacing = round((solar_width - font15_testall.max_width()*3)/3)
      
      for i in range(4):
         key = f'solar_T{i}'
@@ -272,8 +272,8 @@ def solar_indicator(solar_dict):
 
      color_writer.print("solar", 39, 300)
      #vertical lines simulating panels separation
-     framebuffer.vline(x_pos + int(solar_width/3), y_pos, solar_height, "red")
-     framebuffer.vline(x_pos + int(solar_width*2/3), y_pos, solar_height, "red")
+     framebuffer.vline(x_pos + round(solar_width/3), y_pos, solar_height, "red")
+     framebuffer.vline(x_pos + round(solar_width*2/3), y_pos, solar_height, "red")
      
 
 
@@ -292,7 +292,7 @@ def buffer_indicator(buffer_dict):
             print(sensors, values)
             if 'temp' in sensors:
                 if 'solar' not in sensors: #quick workaround for added sensor
-                    temperatures_dict[sensors]=int(values)
+                    temperatures_dict[sensors]=round(values)
         
         screen_width = 400
         screen_height = 300
@@ -308,14 +308,14 @@ def buffer_indicator(buffer_dict):
         buffer_tempbar_width = 100
         buffer_tempbar_height = 18
         
-        buffer_x, buffer_y = int(screen_horizontal_middle - buffer_tempbar_width/2), 20
+        buffer_x, buffer_y = round(screen_horizontal_middle - buffer_tempbar_width/2), 20
         #printing temperature values and creating temperature bars
 
         color_writer.set_font(font12_temperature)
 
         for temp_sens, value in sorted(temperatures_dict.items()):
            
-            framebuffer.rect(buffer_x + 1,buffer_y+i+1, int(((value - lower_tempC)/delta_tempC)*buffer_tempbar_width), buffer_tempbar_height - 1,'red', True )
+            framebuffer.rect(buffer_x + 1,buffer_y+i+1, round(((value - lower_tempC)/delta_tempC)*buffer_tempbar_width), buffer_tempbar_height - 1,'red', True )
             #test - using writer class to show temperatures (works fine)
             color_writer.print(f'{value}°C',buffer_y + i, buffer_x-40 )
         
@@ -339,13 +339,13 @@ def buffer_indicator(buffer_dict):
             framebuffer.rect(buffer_x - layer, buffer_y - layer, buffer_tempbar_width + 2*layer, i+2*layer, 'black', False) #make one big black rectangle
         
         # percent load bar
-        percent_value = int(buffer_dict['load_percent'])
-        actual_power = int(buffer_dict['power'])
+        percent_value = round(buffer_dict['load_percent'])
+        actual_power = round(buffer_dict['power'])
         
         screen_margin_y = 10
         bar_width = 150
         bar_height = 30
-        load_buffer_x_pos = int(screen_horizontal_middle - bar_width/2)
+        load_buffer_x_pos = round(screen_horizontal_middle - bar_width/2)
         load_bufer_y_pos = 250
         
 
@@ -358,11 +358,11 @@ def buffer_indicator(buffer_dict):
         
        
 
-        red_bar_width = int(bar_width * (percent_value/100))
+        red_bar_width = round(bar_width * (percent_value/100))
         framebuffer.rect(load_buffer_x_pos+1, load_bufer_y_pos+1, red_bar_width, bar_height-2, 'red', True)
         
         #add some vertical line to buffer bar 
-        step = int(bar_width/10)
+        step = round(bar_width/10)
         for factor in range(1,10):
              color_str = ''
              vline_pos = step * factor
@@ -403,7 +403,7 @@ def draw_arrow(x_pos, y_pos, width, height, color, fill = True, direction = 'up'
      x_zero_coord = 0
      y_zero_coord = 0
 
-     y_middle = int(height/2)
+     y_middle = round(height/2)
 
      if direction == 'down':
         y_zero_coord = height
@@ -411,13 +411,13 @@ def draw_arrow(x_pos, y_pos, width, height, color, fill = True, direction = 'up'
 
 
      points = [
-         (int(width/3), height),  #point_0
-         (int(width*2/3),height), #point_1
-         (int(width*2/3), y_middle), #point_2
+         (round(width/3), height),  #point_0
+         (round(width*2/3),height), #point_1
+         (round(width*2/3), y_middle), #point_2
          (width, y_middle), #point_3
-         (int(width/2), y_zero_coord), #point_4
+         (round(width/2), y_zero_coord), #point_4
          (x_zero_coord, y_middle), #point_5
-         (int(width/3), y_middle) #point_6
+         (round(width/3), y_middle) #point_6
         ]
      # Rozpakowanie krotek do jednej listy
      flattened_points = [value for point in points for value in point]
