@@ -218,6 +218,7 @@ def show_temperature_and_load_difference(previous_meas_dict,global_dict_sensors)
      
 
 buffer_sensors_dict = {
+     'temp0': 0,
      'temp1': 0,
      'temp2': 0,
      'temp3': 0,
@@ -300,7 +301,7 @@ PSHS1000
   |                   |_ <--- C,M     | 1.25m
   |                   |
   |                   |
-  |                   |= (solar in)   | 0.8m
+  |                   |= (solar in)   | 0.9m
   |                   |_ 
   |                   |_ <--- D,N     | 0.75m
   |                   |
@@ -311,8 +312,6 @@ PSHS1000
   |                   | 
   |___________________|
 
-            X
-       <-------->
 """
 #buffer dimensions, in m
 
@@ -326,24 +325,47 @@ def buffer_image(x_pos, y_pos, image_height, temperature_dict):
     stub_1 = 1.25
     stub_2 = 0.75
     stub_3 = 0.3
-    stub_solar_in = 0.8  
+    stub_solar_in = 0.9  
+    stub_1_5inch_size = 0.0375
+    stub_1inch_size = 0.025
 
+    def draw_stub(stub_x_pos, stub_height, stub_size, stub_length_in_px):
+         
+         scaling_factor = image_height/buffer_height
+     
+         stub_y_pos = round(scaling_factor * ((buffer_height - stub_height) - stub_size/2)) #upper edge
+         stub_y_pos = stub_y_pos + y_pos
+         stub_size_in_pix = round(scaling_factor * stub_size) 
+         framebuffer.hline(stub_x_pos, stub_y_pos, stub_length_in_px, 'black' )
+         framebuffer.hline(stub_x_pos, stub_y_pos + stub_size_in_pix, stub_length_in_px, 'black' )
+         
+    
     
     lower_tempC = 30
     upper_tempC = 90
     delta_tempC = upper_tempC - lower_tempC
     image_width = round(buffer_width/buffer_height*image_height)
     
-    buffer_tempbar_width = 100
-    buffer_tempbar_height = int(image_height/8)  
+    buffer_tempbar_height = round(image_height/9)  
+    
+    second_wall_tank_x_pos = x_pos+ image_width
+    #drawing stubs - test
+    draw_stub(second_wall_tank_x_pos, stub_0, stub_1_5inch_size, 10)
+    draw_stub(second_wall_tank_x_pos, stub_1, stub_1_5inch_size, 10)
+    draw_stub(second_wall_tank_x_pos, stub_2, stub_1_5inch_size, 10)
+    draw_stub(second_wall_tank_x_pos, stub_3, stub_1_5inch_size, 10)
+    draw_stub(second_wall_tank_x_pos, stub_solar_in, stub_1inch_size, 10)
+
 
     #printing buffer perimeter
-    bar_thickness = 2
+    bar_thickness = 3
     for layer in range(bar_thickness):    
         framebuffer.rect(x_pos - layer, y_pos - layer, image_width + 2*layer, image_height+2*layer, 'black', False) #make one big black rectangle 
-
+     
+    color_writer.set_font(font15_testall) 
+    color_writer.print("bufor", y_pos - 18, x_pos +3)
     color_writer.set_font(font12_temperature)
-
+    
     i = 0
     #printing temperature bars
     for temp_sens, value in sorted(temperature_dict.items()):
@@ -352,6 +374,7 @@ def buffer_image(x_pos, y_pos, image_height, temperature_dict):
             color_writer.print(f'{value}°',y_pos + i, x_pos-30 )
             i = i + buffer_tempbar_height     
 
+# TODO - showing position and sizes of given graphic element (debug mode)
 
 def buffer_indicator(x_pos, y_pos, image_height, buffer_dict):
         
@@ -383,7 +406,7 @@ def buffer_indicator(x_pos, y_pos, image_height, buffer_dict):
 
         for temp_sens, value in sorted(temperatures_dict.items()):
            
-            average_temperature += value/8
+            average_temperature += value/9
 
 
         buffer_image(x_pos, y_pos, image_height, temperatures_dict)
@@ -539,6 +562,30 @@ async def frame_first_update():
         framebuffer.text(formatted_time, 300, 270,'red')
      GUI_update()
      eink_init_deinit_execute(local_time)
+
+def debug_draw_grid():
+    #50px x 50px
+     x_width = 400
+     y_width = 300
+     color_writer.set_font(font3Mono)
+     for test_x in range(0,400, 50):
+       color_writer.print(f'{test_x}', 250, test_x, 'red')
+     
+     for test_y in range(0,300, 50):
+         color_writer.print(f'{test_y}', test_y,48,  'black')
+
+     
+     for test_x in range(0,400, 50):
+        for y in range(0,300,5):
+            framebuffer.pixel(test_x, y, 'red')
+
+     for test_y in range(0,300, 50):
+        for test_x in range(0,400, 5):
+             framebuffer.pixel(test_x,test_y, 'black')
+     
+     frame_update()
+     
+
 
 async def frame_clear_async():
      clear_screen()
