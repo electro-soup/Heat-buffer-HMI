@@ -36,7 +36,7 @@ import framebuf
 buf_black = bytearray(w * h // 8)
 buf_red = bytearray(w * h // 8)
 
-
+#function to be always sure that eink is handled properly - if there is no reset, then we can not update anything
 def eink_init_deinit_execute(callback):
     eink_display.reset()
     eink_display.init()
@@ -177,12 +177,12 @@ def print_and_color_temp_diffs(value, format_string, row, column): #positive val
     color_writer.set_font(font12_temperature)
     
     if value > 0:
-         color_writer.print('+' + format_string, row, column, "red")
-         draw_arrow(column+20, row, 30, 40, 'red')
+         color_writer.print('+' + format_string, row, column +42, "red")
+         draw_arrow(column, row, 30, 40, 'red')
          
     if value < 0:
-         color_writer.print(format_string, row, column, "black")
-         draw_arrow(column+20, row, 30, 40, 'black', direction="down")
+         color_writer.print(format_string, row, column+42, "black")
+         draw_arrow(column, row, 30, 40, 'black', direction="down")
         
     if value == 0:
         color_writer.print("", row, column, 'black')
@@ -282,12 +282,85 @@ def update_sensors_dict(dSourceSensors, dDestinationSensors): #risky - for now n
      for sensor, value in dDestinationSensors.items():
           dDestinationSensors[sensor] = dSourceSensors[sensor]
 
-def buffer_indicator(buffer_dict):
+
+
+
+
+"""
+PSHS1000
+          F = 0.79m
+  <------------------->
+   ___________________   <--- A,J,K,W | 2 m
+  |                   |
+  |                   |_
+  |                   |_ <--- B,L     | 1.7m
+  |                   |
+  |                   |
+  |                   |_
+  |                   |_ <--- C,M     | 1.25m
+  |                   |
+  |                   |
+  |                   |= (solar in)   | 0.8m
+  |                   |_ 
+  |                   |_ <--- D,N     | 0.75m
+  |                   |
+  |                   |  
+  |                   |_
+  |                   |_ <--- E,O,I   | 0.3m
+  |                   |
+  |                   | 
+  |___________________|
+
+            X
+       <-------->
+"""
+#buffer dimensions, in m
+
+
+
+def buffer_image(x_pos, y_pos, image_height, temperature_dict):
+     
+    buffer_height = 2.0
+    buffer_width = 0.79
+    stub_0 = 1.7
+    stub_1 = 1.25
+    stub_2 = 0.75
+    stub_3 = 0.3
+    stub_solar_in = 0.8  
+
+    
+    lower_tempC = 30
+    upper_tempC = 90
+    delta_tempC = upper_tempC - lower_tempC
+    image_width = round(buffer_width/buffer_height*image_height)
+    
+    buffer_tempbar_width = 100
+    buffer_tempbar_height = int(image_height/8)  
+
+    #printing buffer perimeter
+    bar_thickness = 2
+    for layer in range(bar_thickness):    
+        framebuffer.rect(x_pos - layer, y_pos - layer, image_width + 2*layer, image_height+2*layer, 'black', False) #make one big black rectangle 
+
+    color_writer.set_font(font12_temperature)
+
+    i = 0
+    #printing temperature bars
+    for temp_sens, value in sorted(temperature_dict.items()):
+           
+            framebuffer.rect(x_pos + 1,y_pos+i+1, round(((value - lower_tempC)/delta_tempC)*image_width), buffer_tempbar_height - 1,'red', True )
+            color_writer.print(f'{value}°',y_pos + i, x_pos-30 )
+            i = i + buffer_tempbar_height     
+
+
+def buffer_indicator(x_pos, y_pos, image_height, buffer_dict):
         
         temperatures_dict = {}
         #test_writer.set_textpos(my_text_display, 4, 4)
         #test_writer.printstring("!%()*+,-./0123456789:\n;<=>?@ABCDEFGHI\nJKLMNOPQRSTUVW \n XYZ[\]^_`abcd\nefghijklmnopqr\nstuvwxyz{|}°\nąężźćó\nĄĘŻŹĆÓ", True)
-        
+         
+        buffer_x, buffer_y = 50, 20 
+
         for sensors, values in sorted(buffer_dict.items()):
             print(sensors, values)
             if 'temp' in sensors:
@@ -305,23 +378,16 @@ def buffer_indicator(buffer_dict):
         upper_tempC = 90
         delta_tempC = upper_tempC - lower_tempC
         average_temperature = 0
-        buffer_tempbar_width = 100
-        buffer_tempbar_height = 18
         
-        buffer_x, buffer_y = round(screen_horizontal_middle - buffer_tempbar_width/2), 20
         #printing temperature values and creating temperature bars
-
-        color_writer.set_font(font12_temperature)
 
         for temp_sens, value in sorted(temperatures_dict.items()):
            
-            framebuffer.rect(buffer_x + 1,buffer_y+i+1, round(((value - lower_tempC)/delta_tempC)*buffer_tempbar_width), buffer_tempbar_height - 1,'red', True )
-            #test - using writer class to show temperatures (works fine)
-            color_writer.print(f'{value}°C',buffer_y + i, buffer_x-40 )
-        
-            i = i + buffer_tempbar_height
             average_temperature += value/8
-        
+
+
+        buffer_image(x_pos, y_pos, image_height, temperatures_dict)
+
         column = 270
         row = 100
         color_writer.set_font(font15_testall)
@@ -332,11 +398,6 @@ def buffer_indicator(buffer_dict):
         color_writer.set_font(font42_bufferload)
         color_writer.print(f'{int(average_temperature)}°C', row+40, column)
         
-        
-        bar_thickness = 2
-
-        for layer in range(bar_thickness):    
-            framebuffer.rect(buffer_x - layer, buffer_y - layer, buffer_tempbar_width + 2*layer, i+2*layer, 'black', False) #make one big black rectangle
         
         # percent load bar
         percent_value = round(buffer_dict['load_percent'])
@@ -356,8 +417,6 @@ def buffer_indicator(buffer_dict):
         for layer in range(bar_thickness-3):
             framebuffer.rect(load_buffer_x_pos-layer, load_bufer_y_pos-layer, bar_width+layer*2, bar_height+layer*2, 'white', False) #black frame #1
         
-       
-
         red_bar_width = round(bar_width * (percent_value/100))
         framebuffer.rect(load_buffer_x_pos+1, load_bufer_y_pos+1, red_bar_width, bar_height-2, 'red', True)
         
@@ -432,7 +491,7 @@ def GUI_update():
      global buffer_sensors_dict
      global global_dict_sensors
 
-     buffer_indicator(buffer_sensors_dict)
+     buffer_indicator(170, 20,150,buffer_sensors_dict)
      solar_indicator(solar_sensors_dict)   #to be changed after refactor  
      
 counter = 0
@@ -466,8 +525,7 @@ def sub_cb(topic, msg, retained):
         counter += 1
         update_sensors_dict(global_dict_sensors, buffer_sensors_dict)
         update_sensors_dict(global_dict_sensors, solar_sensors_dict)
-        GUI_update()
-        #buffer_indicator(temp_dict)
+        #GUI_update()
         print(counter)
 
         
@@ -479,7 +537,7 @@ async def frame_first_update():
         current_time = time.localtime()
         formatted_time = "{:02}:{:02}:{:02}".format(current_time[3], current_time[4], current_time[5])
         framebuffer.text(formatted_time, 300, 270,'red')
-
+     GUI_update()
      eink_init_deinit_execute(local_time)
 
 async def frame_clear_async():
@@ -536,6 +594,7 @@ async def frame_update_async():
           current_time = time.localtime()
           formatted_time = "{:02}:{:02}:{:02}".format(current_time[3], current_time[4], current_time[5])
           framebuffer.text(formatted_time, 300, 270,'red')
+          GUI_update()
           frame_update()
           
 
