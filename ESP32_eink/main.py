@@ -25,8 +25,6 @@ eink_display.init()
 
 w = 400
 h = 300
-x = 0
-y = 0
 
 # --------------------
 
@@ -517,8 +515,26 @@ def GUI_update():
      buffer_indicator(170, 20,150,buffer_sensors_dict)
      solar_indicator(solar_sensors_dict)   #to be changed after refactor  
      
-counter = 0
+
+def test_mapping(dummy):
+    print('home/kotlownia/bufor decoded')
+
+def display_MQTT_control(command): #there is error for that, but still works
+    print(command) #prototype for remote function execution 
+    eval(command['execute'])
+    #clear_screen()
+    print("s, MQTT control works!")
+
+#prototype function mapping for MQTT callback - to keep it clean and not growing for each added mqtt topic
+dMQTT_function_mapping = {
+    'home/kotlownia/bufor' : test_mapping,
+    'eink_ctrl/screen_onoff':display_MQTT_control
     
+}
+        
+             
+
+counter = 0
 global_dict_sensors = {}
 
 # Subscription callback
@@ -529,12 +545,16 @@ def sub_cb(topic, msg, retained):
     print(topic.decode())
    
     global global_dict_sensors
-
-    if topic.decode() == 'home/kotlownia/bufor':
+    decoded_topic = topic.decode()
+    decoded_message = msg.decode()
+    eval_dict = json.loads(decoded_message)
+    
+    #TODO - dictionary of topics and connected function for them
+    if decoded_topic == 'home/kotlownia/bufor':
 
         #test debug output with Mono3x3
         color_writer.set_font(font3Mono)
-        
+         
 
         temp_msg = msg.decode()
         temp_dict = json.loads(temp_msg)
@@ -550,10 +570,10 @@ def sub_cb(topic, msg, retained):
         update_sensors_dict(global_dict_sensors, solar_sensors_dict)
         #GUI_update()
         print(counter)
+    
+    dMQTT_function_mapping[decoded_topic](eval_dict) #it completely brokes that function 
 
-        
-        
-        
+
 async def frame_first_update():
      await asyncio.sleep(1) # wait a second
      def local_time():
@@ -561,7 +581,7 @@ async def frame_first_update():
         formatted_time = "{:02}:{:02}:{:02}".format(current_time[3], current_time[4], current_time[5])
         framebuffer.text(formatted_time, 300, 270,'red')
      GUI_update()
-     eink_init_deinit_execute(local_time)
+     eink_init_deinit_execute(local_time) #this function is very unclear right now
 
 def debug_draw_grid():
     #50px x 50px
@@ -617,6 +637,7 @@ async def wifi_han(state):
 async def conn_han(client):
     await client.subscribe('foo_topic', 1)
     await client.subscribe('home/kotlownia/bufor', 0)
+    await client.subscribe('eink_ctrl/screen_onoff', 0)
 
 
 async def frame_update_async():
