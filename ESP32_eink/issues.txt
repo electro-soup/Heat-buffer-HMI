@@ -10,7 +10,7 @@ TODO:
 
 IDEAS:
 1.Control through MQTT - powering screen off etc.
-
+2. soft resets, with reset reason, send via mqtt
 BLOCKERS:
 1. After adding code for declaring two dictonaries there is no space for WiFi init:
 E (3098) wifi:Expected to init 10 rx buffer, actual is 5
@@ -19,3 +19,4 @@ micropython v. 1.22, will try flash 1.20 - update - works fine with 1.21
 2. after loading init values (-99 etc) and displaying it causes all screen go red - GUI elements (rectangles etc. does not handle (-) values)
 3. assert will be needed if buffer loads etc drop below zero
 4. if there is connection with broker disrupted, then two instances of wifi are created
+
