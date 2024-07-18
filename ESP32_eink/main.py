@@ -545,9 +545,12 @@ def sub_cb(topic, msg, retained):
     print(topic.decode())
    
     global global_dict_sensors
-    decoded_topic = topic.decode()
-    decoded_message = msg.decode()
-    eval_dict = json.loads(decoded_message)
+    try:
+        decoded_topic = topic.decode()
+        decoded_message = msg.decode()
+        eval_dict = json.loads(decoded_message)
+    except:
+        print(f'incorrect json format of incoming message from {decoded_topic}')
     
     #TODO - dictionary of topics and connected function for them
     if decoded_topic == 'home/kotlownia/bufor':
@@ -570,8 +573,10 @@ def sub_cb(topic, msg, retained):
         update_sensors_dict(global_dict_sensors, solar_sensors_dict)
         #GUI_update()
         print(counter)
-    
-    dMQTT_function_mapping[decoded_topic](eval_dict) #it completely brokes that function 
+    try:
+        dMQTT_function_mapping[decoded_topic](eval_dict) #it completely brokes that function 
+    except:
+        print(f"internal error for function mapped for {eval_dict}")
 
 
 async def frame_first_update():
@@ -643,9 +648,23 @@ async def conn_han(client):
 async def frame_update_async():
      while True:
           global counter
+
+          waiting_counter = 0
           while (counter == 0):
-              print("waiting for first mqtt frame ")
+              print(f"waiting for first mqtt frame for {waiting_counter*5}s")
               await asyncio.sleep(5)
+              waiting_counter += 1
+
+              if waiting_counter == 12: # 5*12 = 1min - in case if there is nothing sent by nymea
+                  clear_framebuffers()
+                  text_to_print = "brak ramek z danymi z kotłowni"
+                  x_pos_of_string = (400 - (font15_testall.max_width()*len(text_to_print)))/2
+                  x_pos_of_string = round(x_pos_of_string)
+                  color_writer.print(text_to_print, 150, x_pos_of_string, "black")
+                  frame_update()
+              
+              if waiting_counter == 60:
+                  clear_screen()
 
 
           print("async frame update")
@@ -665,14 +684,6 @@ async def frame_update_async():
           GUI_update()
           frame_update()
           
-
-#temp function to reset system if there is no proper error handling coded
-async def reset_system():
-     import machine
-     while True:
-          await asyncio.sleep(60*60*6) # perform reset after 6 hours
-          print("reset in the loop")
-          machine.reset()
 
 async def simple_watchdog():
     
