@@ -127,18 +127,29 @@ class NotionalDisplay(framebuf.FrameBuffer):
 my_text_display = NotionalDisplay(400, 300, buf_black)
 my_text_display_red = NotionalDisplay(400, 300,buf_red)
 
-test_writer = Writer(my_text_display, font15_testall)
-writer_red_power = Writer(my_text_display_red, font15_testall)
+
+
 
 #loading too much objects create issue with wifi startup
 
 class ColorWriter(Writer):
+     _instance = None
+     
+     def __new__(singleton_cls, device_black, device_red, font, verbose=True):
+        if not singleton_cls._instance:
+            singleton_cls._instance = super(ColorWriter, singleton_cls).__new__(singleton_cls)
+            singleton_cls._instance._initialized = False
+        return singleton_cls._instance
+
      def __init__(self, device_black, device_red, font, verbose=True):
+          if self._initialized:
+            return
           self.black_fb = device_black
           self.red_fb = device_red
           self.font = font #default font
           self.black_writer = Writer(self.black_fb, self.font, verbose)
           self.red_writer =  Writer(self.red_fb, self.font, verbose)
+          self._initialized = True
 
      def print(self, text, row, column, color = 'black', font = None): #assume implicitly that black is used
         
@@ -156,6 +167,59 @@ class ColorWriter(Writer):
      def set_font(self,font): #to avoid typing font if we are intent to use it consecutively in the code
           self.black_writer.font = font
           self.red_writer.font = font
+
+
+class GUI_text:
+    
+    def __init__(self, x_pos, y_pos, font, font_color = 'black'):
+        self.y_pos = y_pos
+        self.x_pos = x_pos
+        self.font = font
+        self.text = None
+        self.color = font_color
+        self.writer = ColorWriter(my_text_display, my_text_display_red, font15_testall)
+        self.previous_x_pos = None
+        self.previous_y_pos = None
+    
+    def print(self, str_text, refresh = False):
+        self.text = str_text
+        self.writer.print(self.text, self.y_pos, self.x_pos, self.color, self.font)
+        if refresh is True: 
+            frame_update()
+
+    def get_text(self):
+        return(self.text)
+    
+    def get_coords(self):
+        return self.x_pos, self.y_pos
+    
+    def get_x_pos(self):
+        return self.x_pos
+    
+    def get_y_pos(self):
+        return self.y_pos
+    
+    def set_font(self, font):
+        self.writer.set_font(font)
+
+    def set_new_pos(self, new_x, new_y):
+        self.previous_x_pos = self.x_pos
+        self.previous_y_pos = self.y_pos
+
+        self.x_pos = new_x
+        self.y_pos = new_y
+        
+    #init version - just redraw:
+
+    def reprint(self, refresh = False):
+        empty_string = ' '.join(' ' for _ in self.text) #to clear previous writer entry, there has to be empty string of the same length
+        self.writer.print(empty_string, self.previous_y_pos, self.previous_x_pos, self.color, self.font)
+        self.writer.print(self.text, self.y_pos, self.x_pos, self.color,  self.font)
+        if refresh is True: 
+            frame_update()
+        
+test_gui_text = GUI_text(0,0, font15_testall, 'black')
+inny_test = GUI_text(0,0, font42_bufferload, 'red')
 
 color_writer = ColorWriter(my_text_display, my_text_display_red, font15_testall) 
 
@@ -373,6 +437,9 @@ def buffer_image(x_pos, y_pos, image_height, temperature_dict):
             i = i + buffer_tempbar_height     
 
 # TODO - showing position and sizes of given graphic element (debug mode)
+
+
+
 
 def buffer_indicator(x_pos, y_pos, image_height, buffer_dict):
         
@@ -722,17 +789,12 @@ async def main(client):
         print('Connection failed.')
         clear_framebuffers()
            
-        for i in range (9):
-            test_writer.set_textpos(my_text_display,10 + i * 14, 20 )
-            test_writer.printstring("brak połączenia przez okres 1 minuty przy starcie, restart systemu\n") 
+        
         #frame_update()
         asyncio.create_task(frame_clear_async())
        
-     
-        # TODO - proper handling of this error - it just stays here (without reset)
     n = 0
-   
-    
+
     while True:
         await asyncio.sleep(5)
         print('publish', n)
