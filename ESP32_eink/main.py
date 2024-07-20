@@ -177,6 +177,38 @@ class ColorWriter(Writer):
      
 
 
+class GUI_drawing:
+    def __init__(self, x_pos, y_pos, width, height, drawing_function, *args):
+        self.x_pos = x_pos
+        self.y_pos = y_pos
+        self.draw_func = drawing_function
+        self.args = args
+        self.height = height
+        self.width = width
+        self.previous_x_pos = None
+        self.previous_y_pos = None
+
+    def draw_element(self):
+        self.draw_func(self.x_pos, self.y_pos,*self.args)
+    
+    def update(self):
+        self.clear_area()
+        self.draw_element()
+
+    def clear_area(self):
+        framebuffer.rect(self.x_pos, self.y_pos, self.width, self.height, 'white', fill = True)
+
+    def update_position(self, new_pos_X, new_pos_y):
+        self.previous_x_pos = self.x_pos
+        self.previous_y_pos = self.y_pos
+        self.clear_area() #clean previous occupied area
+        self.x_pos = new_pos_X
+        self.y_pos = new_pos_y
+        self.clear_area() #clear newly set area
+        self.draw_element()
+
+
+
 class GUI_text:
     
     def __init__(self, x_pos, y_pos, font, font_color = 'black'):
@@ -324,14 +356,36 @@ solar_sensors_dict = {
       'solar_T3': 0
 }      
 
+mock_buffer_sensors_dict = {
+     'temp0': 59,
+     'temp1': 54,
+     'temp2': 54,
+     'temp3': 51,
+     'temp4': 50,
+     'temp5': 48,
+     'temp6': 48,
+     'temp7': 48,
+     'temp8': 50,
+     'kWh'  : 49,
+     'load_percent': 35,
+     'power': 990,
+     'update_time' : '99/99/2137 99:99'
+}
 
+mock_solar_sensors_dict = {
+      'solar_T0': 90, 
+      'solar_T1': 89, 
+      'solar_T2': 89,
+      'solar_T3': 79
+}
 
-def solar_indicator(solar_dict):
+def mock_sensors():
+     update_sensors_dict(mock_buffer_sensors_dict, buffer_sensors_dict)
+     update_sensors_dict(mock_solar_sensors_dict, solar_sensors_dict)
+
+def solar_indicator(x_pos, y_pos, solar_width, solar_height, solar_dict):
      
-     x_pos = 265
-     y_pos = 15
-     solar_width = 120
-     solar_height = 70
+     
      temperature_correction = [0, 0, 2,0]
      
 
@@ -412,12 +466,15 @@ def buffer_image(x_pos, y_pos, image_height, temperature_dict):
     stub_1_5inch_size = 0.0375
     stub_1inch_size = 0.025
 
+    x_offset = 30
+    y_offset = 18
+
     def draw_stub(stub_x_pos, stub_height, stub_size, stub_length_in_px):
          
          scaling_factor = image_height/buffer_height
      
          stub_y_pos = round(scaling_factor * ((buffer_height - stub_height) - stub_size/2)) #upper edge
-         stub_y_pos = stub_y_pos + y_pos
+         stub_y_pos = stub_y_pos + y_pos + y_offset
          stub_size_in_pix = round(scaling_factor * stub_size) 
          framebuffer.hline(stub_x_pos, stub_y_pos, stub_length_in_px, 'black' )
          framebuffer.hline(stub_x_pos, stub_y_pos + stub_size_in_pix, stub_length_in_px, 'black' )
@@ -431,7 +488,7 @@ def buffer_image(x_pos, y_pos, image_height, temperature_dict):
     
     buffer_tempbar_height = round(image_height/9)  
     
-    second_wall_tank_x_pos = x_pos+ image_width
+    second_wall_tank_x_pos = x_pos+ image_width + x_offset
     #drawing stubs - test
     draw_stub(second_wall_tank_x_pos, stub_0, stub_1_5inch_size, 10)
     draw_stub(second_wall_tank_x_pos, stub_1, stub_1_5inch_size, 10)
@@ -443,18 +500,18 @@ def buffer_image(x_pos, y_pos, image_height, temperature_dict):
     #printing buffer perimeter
     bar_thickness = 3
     for layer in range(bar_thickness):    
-        framebuffer.rect(x_pos - layer, y_pos - layer, image_width + 2*layer, image_height+2*layer, 'black', False) #make one big black rectangle 
+        framebuffer.rect( x_offset+x_pos - layer, y_offset + y_pos - layer, image_width + 2*layer, image_height+2*layer, 'black', False) #make one big black rectangle 
      
     color_writer.set_font(font15_testall) 
-    color_writer.print("bufor", y_pos - 18, x_pos +3)
+    color_writer.print("bufor", y_pos, x_pos +3)
     color_writer.set_font(font12_temperature)
     
     i = 0
     #printing temperature bars
     for temp_sens, value in sorted(temperature_dict.items()):
            
-            framebuffer.rect(x_pos + 1,y_pos+i+1, round(((value - lower_tempC)/delta_tempC)*image_width), buffer_tempbar_height - 1,'red', True )
-            color_writer.print(f'{value}°',y_pos + i, x_pos-30 )
+            framebuffer.rect(x_offset + x_pos + 1,y_offset + y_pos+i+1, round(((value - lower_tempC)/delta_tempC)*image_width), buffer_tempbar_height - 1,'red', True )
+            color_writer.print(f'{value}°',y_offset+y_pos + i, x_pos )
             i = i + buffer_tempbar_height     
 
 # TODO - showing position and sizes of given graphic element (debug mode)
@@ -468,7 +525,7 @@ def buffer_indicator(x_pos, y_pos, image_height, buffer_dict):
         #test_writer.set_textpos(my_text_display, 4, 4)
         #test_writer.printstring("!%()*+,-./0123456789:\n;<=>?@ABCDEFGHI\nJKLMNOPQRSTUVW \n XYZ[\]^_`abcd\nefghijklmnopqr\nstuvwxyz{|}°\nąężźćó\nĄĘŻŹĆÓ", True)
          
-        buffer_x, buffer_y = 50, 20 
+        
 
         for sensors, values in sorted(buffer_dict.items()):
             print(sensors, values)
@@ -508,42 +565,7 @@ def buffer_indicator(x_pos, y_pos, image_height, buffer_dict):
         color_writer.print(f'{int(average_temperature)}°C', row+40, column)
         
         
-        # percent load bar
-        percent_value = round(buffer_dict['load_percent'])
-        actual_power = round(buffer_dict['power'])
-        
-        screen_margin_y = 10
-        bar_width = 150
-        bar_height = 30
-        load_buffer_x_pos = round(screen_horizontal_middle - bar_width/2)
-        load_bufer_y_pos = 250
-        
-
-        bar_thickness = 5
-        for layer in range(bar_thickness):
-            framebuffer.rect(load_buffer_x_pos-layer, load_bufer_y_pos-layer, bar_width+layer*2, bar_height+layer*2, 'black', False) #black frame #1
-        
-        for layer in range(bar_thickness-3):
-            framebuffer.rect(load_buffer_x_pos-layer, load_bufer_y_pos-layer, bar_width+layer*2, bar_height+layer*2, 'white', False) #black frame #1
-        
-        red_bar_width = round(bar_width * (percent_value/100))
-        framebuffer.rect(load_buffer_x_pos+1, load_bufer_y_pos+1, red_bar_width, bar_height-2, 'red', True)
-        
-        #add some vertical line to buffer bar 
-        step = round(bar_width/10)
-        for factor in range(1,10):
-             color_str = ''
-             vline_pos = step * factor
-             if vline_pos < red_bar_width:
-                color = "white"
-             else:
-                color = "black"
-             
-             color = "white"
-             framebuffer.vline(load_buffer_x_pos + vline_pos-1, load_bufer_y_pos+1,bar_height, color)
-             framebuffer.vline(load_buffer_x_pos + vline_pos, load_bufer_y_pos+1,bar_height, color)
-             framebuffer.vline(load_buffer_x_pos + vline_pos+1, load_bufer_y_pos+1,bar_height, color)
-
+       
         color_writer.set_font(font15_testall)
         color_writer.print(f"moc: {actual_power}W", 250, 300)
       
@@ -559,6 +581,9 @@ def buffer_indicator(x_pos, y_pos, image_height, buffer_dict):
         color_writer.print('ostatnia', row + 20, 10)
         color_writer.print('aktualizacja:', row + 40, 10)
         color_writer.print(buffer_sensors_dict['update_time'],row + 60, 10)
+
+def percentage_load_bar():
+    
 
 # some mingling with drawing assets as vectors
 def draw_arrow(x_pos, y_pos, width, height, color, fill = True, direction = 'up'):
@@ -593,15 +618,17 @@ def draw_arrow(x_pos, y_pos, width, height, color, fill = True, direction = 'up'
      
      framebuffer.poly(x_pos, y_pos, arrow_coords, color, fill)
      
-        
+bufor = GUI_drawing(150,0,100, 170, buffer_indicator, 150, buffer_sensors_dict)      
 
 def GUI_update():
      global solar_sensors_dict
      global buffer_sensors_dict
      global global_dict_sensors
 
-     buffer_indicator(170, 20,150,buffer_sensors_dict)
-     solar_indicator(solar_sensors_dict)   #to be changed after refactor  
+
+     bufor.update()
+     #buffer_indicator(170, 20,150,buffer_sensors_dict)
+     solar_indicator(265, 15, 120, 70, solar_sensors_dict)   #to be changed after refactor  
      
 
 def test_mapping(dummy):
