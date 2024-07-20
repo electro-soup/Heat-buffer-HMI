@@ -25,7 +25,7 @@ eink_display.init()
 
 w = 400
 h = 300
-
+#TODO - timeout for waiting to idle
 # --------------------
 
 # use a frame buffer
@@ -168,6 +168,14 @@ class ColorWriter(Writer):
           self.black_writer.font = font
           self.red_writer.font = font
 
+     def get_stringlen_in_px(self, string, font_color):
+         if font_color == 'black':
+            return self.black_writer.stringlen(string)
+         if font_color == 'red':
+            return self.red_writer.stringlen(string)
+    
+     
+
 
 class GUI_text:
     
@@ -177,13 +185,19 @@ class GUI_text:
         self.font = font
         self.text = None
         self.color = font_color
-        self.writer = ColorWriter(my_text_display, my_text_display_red, font15_testall)
+        self.writer = ColorWriter(my_text_display, my_text_display_red, self.font)
         self.previous_x_pos = None
         self.previous_y_pos = None
+        self.string_pixel_length = None
+        
     
     def print(self, str_text, refresh = False):
         self.text = str_text
+        self.writer.set_font(self.font)
+        self.string_pixel_length = self.writer.get_stringlen_in_px(self.text, self.color)
+        self.clear_background(self.x_pos, self.y_pos, self.string_pixel_length, self.font.height())
         self.writer.print(self.text, self.y_pos, self.x_pos, self.color, self.font)
+        print("print")
         if refresh is True: 
             frame_update()
 
@@ -212,12 +226,19 @@ class GUI_text:
     #init version - just redraw:
 
     def reprint(self, refresh = False):
-        empty_string = ' '.join(' ' for _ in self.text) #to clear previous writer entry, there has to be empty string of the same length
-        self.writer.print(empty_string, self.previous_y_pos, self.previous_x_pos, self.color, self.font)
-        self.writer.print(self.text, self.y_pos, self.x_pos, self.color,  self.font)
-        if refresh is True: 
-            frame_update()
-        
+        self.clear_background(self.previous_x_pos, self.previous_y_pos, self.string_pixel_length, self.font.height()) # make white rectangle to cover old string
+        self.print(self.text, refresh)
+       
+
+    def clear_background(self, x_pos, y_pos, width, height, color = 'white', fill = True):
+        framebuffer.rect(x_pos, y_pos, width, height, color, fill) # make white rectangle to cover old string/new string
+    
+    def test_partial_update(self):
+        eink_display.wake_up()
+        eink_display.send_buffer(buf_black, buf_red)
+        eink_display.partial_refresh(self.x_pos, self.x_pos + self.string_pixel_length, self.y_pos, self.y_pos + self.font.height(), 1)
+        eink_display.sleep()
+
 test_gui_text = GUI_text(0,0, font15_testall, 'black')
 inny_test = GUI_text(0,0, font42_bufferload, 'red')
 

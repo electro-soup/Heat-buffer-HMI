@@ -152,7 +152,7 @@ class EPD:
         self._command(POWER_OFF)
         self.wait_until_idle()
         self._command(DEEP_SLEEP, b'\xA5') # check code
-    
+    #PTSCAN OFF - strange ghost image below and above refreshed area
     def partial_refresh(self, horizontal_bank_start, horizontal_bank_stop, vertical_bank_start, vertical_bank_stop, PT_SCAN_ON_OFF):
         self._command(PARTIAL_IN) #enter partial refresh
         self.wait_until_idle()
