@@ -168,6 +168,8 @@ class ColorWriter(Writer):
           self.black_writer.font = font
           self.red_writer.font = font
 
+     
+
      def get_stringlen_in_px(self, string, font_color):
          if font_color == 'black':
             return self.black_writer.stringlen(string)
@@ -421,9 +423,6 @@ def update_sensors_dict(dSourceSensors, dDestinationSensors): #risky - for now n
           dDestinationSensors[sensor] = dSourceSensors[sensor]
 
 
-
-
-
 """
 PSHS1000
           F = 0.79m
@@ -452,8 +451,9 @@ PSHS1000
 """
 #buffer dimensions, in m
 
-
-
+GUI_loadbuffer_avg_temperature = GUI_text(270, 140, font42_bufferload, 'black')
+GUI_loadbuffer_percentage = GUI_text(160, 195, font42_bufferload, 'black')
+#TODO margin handling, because it causes very strange effects
 def buffer_image(x_pos, y_pos, image_height, temperature_dict):
      
     buffer_height = 2.0
@@ -525,8 +525,6 @@ def buffer_indicator(x_pos, y_pos, image_height, buffer_dict):
         #test_writer.set_textpos(my_text_display, 4, 4)
         #test_writer.printstring("!%()*+,-./0123456789:\n;<=>?@ABCDEFGHI\nJKLMNOPQRSTUVW \n XYZ[\]^_`abcd\nefghijklmnopqr\nstuvwxyz{|}°\nąężźćó\nĄĘŻŹĆÓ", True)
          
-        
-
         for sensors, values in sorted(buffer_dict.items()):
             print(sensors, values)
             if 'temp' in sensors:
@@ -534,56 +532,98 @@ def buffer_indicator(x_pos, y_pos, image_height, buffer_dict):
                     temperatures_dict[sensors]=round(values)
         
         screen_width = 400
-        screen_height = 300
         
-
-        screen_horizontal_middle = screen_width/2
 
         i = 0
         lower_tempC = 30
         upper_tempC = 90
         delta_tempC = upper_tempC - lower_tempC
-        average_temperature = 0
-        
+
+
         #printing temperature values and creating temperature bars
-
-        for temp_sens, value in sorted(temperatures_dict.items()):
-           
-            average_temperature += value/9
-
 
         buffer_image(x_pos, y_pos, image_height, temperatures_dict)
 
+        big_fonted_avg_temperature(buffer_dict)
+        last_update_time(buffer_dict)
+        print_power(buffer_dict)
+        percentage_load_bar(30,250, 100, 20,buffer_dict)
+        big_fonted_percentage(buffer_dict)
+
+        
+  
+        
+def big_fonted_avg_temperature(buffer_dict):
+        temperatures_dict={}
+        for sensors, values in sorted(buffer_dict.items()):
+            print(sensors, values)
+            if 'temp' in sensors:
+                if 'solar' not in sensors: #quick workaround for added sensor
+                    temperatures_dict[sensors]=round(values)
         column = 270
         row = 100
         color_writer.set_font(font15_testall)
 
         color_writer.print('średnia', row, column)
-        color_writer.print('temperatura', row+20, column)
+        color_writer.print('temperatura:', row+20, column)
+        average_temperature = 0
+        for temp_sens, value in sorted(temperatures_dict.items()):
+           
+            average_temperature += value/9
         
-        color_writer.set_font(font42_bufferload)
-        color_writer.print(f'{int(average_temperature)}°C', row+40, column)
-        
-        
-       
+        GUI_loadbuffer_avg_temperature.print(f'{round(average_temperature)}°C')
+
+
+def last_update_time(buffer_dict):
+    color_writer.set_font(font15_testall)
+    row = 140
+    color_writer.print('ostatnia', row + 20, 10)
+    color_writer.print('aktualizacja:', row + 40, 10)
+    color_writer.print(buffer_sensors_dict['update_time'],row + 60, 10)
+
+def print_power(buffer_dict):
+        actual_power = round(buffer_dict['power'])
         color_writer.set_font(font15_testall)
         color_writer.print(f"moc: {actual_power}W", 250, 300)
-      
-        #big fonted percent value 
-        writer_row_pos = 195
-        writer_col_pos = 160 
-        color_writer.set_font(font42_bufferload)
-        color_writer.print(f'{percent_value}%',writer_row_pos, writer_col_pos )
-       
-        
-        color_writer.set_font(font15_testall)
-        row = 140
-        color_writer.print('ostatnia', row + 20, 10)
-        color_writer.print('aktualizacja:', row + 40, 10)
-        color_writer.print(buffer_sensors_dict['update_time'],row + 60, 10)
 
-def percentage_load_bar():
-    
+def big_fonted_percentage(buffer_dict):
+    percent_value = round(buffer_dict['load_percent'])
+    GUI_loadbuffer_percentage.print(f'{percent_value}%')
+
+def percentage_load_bar(x_pos, y_pos, bar_width, bar_height, buffer_dict):
+        
+        percent_value = round(buffer_dict['load_percent'])
+       
+
+        load_buffer_x_pos = x_pos
+        load_bufer_y_pos = y_pos
+        
+
+        bar_thickness = 5
+        for layer in range(bar_thickness):
+            framebuffer.rect(load_buffer_x_pos-layer, load_bufer_y_pos-layer, bar_width+layer*2, bar_height+layer*2, 'black', False) #black frame #1
+        
+        for layer in range(bar_thickness-3):
+            framebuffer.rect(load_buffer_x_pos-layer, load_bufer_y_pos-layer, bar_width+layer*2, bar_height+layer*2, 'white', False) #black frame #1
+        
+        red_bar_width = round(bar_width * (percent_value/100))
+        framebuffer.rect(load_buffer_x_pos+1, load_bufer_y_pos+1, red_bar_width, bar_height-2, 'red', True)
+        
+        #add some vertical line to buffer bar 
+        step = round(bar_width/10)
+        for factor in range(1,10):
+             color_str = ''
+             vline_pos = step * factor
+             if vline_pos < red_bar_width:
+                color = "white"
+             else:
+                color = "black"
+             
+             color = "white"
+             framebuffer.vline(load_buffer_x_pos + vline_pos-1, load_bufer_y_pos+1,bar_height, color)
+             framebuffer.vline(load_buffer_x_pos + vline_pos, load_bufer_y_pos+1,bar_height, color)
+             framebuffer.vline(load_buffer_x_pos + vline_pos+1, load_bufer_y_pos+1,bar_height, color)
+
 
 # some mingling with drawing assets as vectors
 def draw_arrow(x_pos, y_pos, width, height, color, fill = True, direction = 'up'):
