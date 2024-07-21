@@ -451,8 +451,8 @@ PSHS1000
 """
 #buffer dimensions, in m
 
-GUI_loadbuffer_avg_temperature = GUI_text(270, 140, font42_bufferload, 'black')
-GUI_loadbuffer_percentage = GUI_text(160, 195, font42_bufferload, 'black')
+
+
 #TODO margin handling, because it causes very strange effects
 def buffer_image(x_pos, y_pos, image_height, temperature_dict):
      
@@ -518,7 +518,6 @@ def buffer_image(x_pos, y_pos, image_height, temperature_dict):
 
 
 
-
 def buffer_indicator(x_pos, y_pos, image_height, buffer_dict):
         
         temperatures_dict = {}
@@ -547,11 +546,11 @@ def buffer_indicator(x_pos, y_pos, image_height, buffer_dict):
         big_fonted_avg_temperature(buffer_dict)
         last_update_time(buffer_dict)
         print_power(buffer_dict)
-        percentage_load_bar(30,250, 100, 20,buffer_dict)
+        #percentage_load_bar(30,250, 100, 20,buffer_dict)
         big_fonted_percentage(buffer_dict)
 
         
-  
+
         
 def big_fonted_avg_temperature(buffer_dict):
         temperatures_dict={}
@@ -624,7 +623,14 @@ def percentage_load_bar(x_pos, y_pos, bar_width, bar_height, buffer_dict):
              framebuffer.vline(load_buffer_x_pos + vline_pos, load_bufer_y_pos+1,bar_height, color)
              framebuffer.vline(load_buffer_x_pos + vline_pos+1, load_bufer_y_pos+1,bar_height, color)
 
+GUI_loadbuffer_avg_temperature = GUI_text(250, 235, font42_bufferload, 'black')
+GUI_loadbuffer_percentage = GUI_text(120, 235, font42_bufferload, 'black')
 
+#framebuffer.rect(240, 220,3,80,'black', fill=True)
+#framebuffer.rect(240, 235,65,3,'black', fill=True)
+bufor = GUI_drawing(150,0,100, 170, buffer_indicator, 150, buffer_sensors_dict) 
+load_bar = GUI_drawing(10, 235, 100, 42, percentage_load_bar, 100, 42, buffer_sensors_dict)     
+  
 # some mingling with drawing assets as vectors
 def draw_arrow(x_pos, y_pos, width, height, color, fill = True, direction = 'up'):
 #how to handle arrays 
@@ -658,7 +664,7 @@ def draw_arrow(x_pos, y_pos, width, height, color, fill = True, direction = 'up'
      
      framebuffer.poly(x_pos, y_pos, arrow_coords, color, fill)
      
-bufor = GUI_drawing(150,0,100, 170, buffer_indicator, 150, buffer_sensors_dict)      
+
 
 def GUI_update():
      global solar_sensors_dict
@@ -667,6 +673,7 @@ def GUI_update():
 
 
      bufor.update()
+     load_bar.update()
      #buffer_indicator(170, 20,150,buffer_sensors_dict)
      solar_indicator(265, 15, 120, 70, solar_sensors_dict)   #to be changed after refactor  
      
