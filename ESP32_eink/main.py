@@ -25,7 +25,7 @@ eink_display.init()
 
 w = 400
 h = 300
-
+#TODO - timeout for waiting to idle
 # --------------------
 
 # use a frame buffer
@@ -122,23 +122,30 @@ class NotionalDisplay(framebuf.FrameBuffer):
         ...
 
 
-     
-
 my_text_display = NotionalDisplay(400, 300, buf_black)
 my_text_display_red = NotionalDisplay(400, 300,buf_red)
 
-test_writer = Writer(my_text_display, font15_testall)
-writer_red_power = Writer(my_text_display_red, font15_testall)
 
 #loading too much objects create issue with wifi startup
 
 class ColorWriter(Writer):
+     _instance = None
+     
+     def __new__(singleton_cls, device_black, device_red, font, verbose=True):
+        if not singleton_cls._instance:
+            singleton_cls._instance = super(ColorWriter, singleton_cls).__new__(singleton_cls)
+            singleton_cls._instance._initialized = False
+        return singleton_cls._instance
+
      def __init__(self, device_black, device_red, font, verbose=True):
+          if self._initialized:
+            return
           self.black_fb = device_black
           self.red_fb = device_red
           self.font = font #default font
           self.black_writer = Writer(self.black_fb, self.font, verbose)
           self.red_writer =  Writer(self.red_fb, self.font, verbose)
+          self._initialized = True
 
      def print(self, text, row, column, color = 'black', font = None): #assume implicitly that black is used
         
@@ -157,19 +164,116 @@ class ColorWriter(Writer):
           self.black_writer.font = font
           self.red_writer.font = font
 
+     def get_stringlen_in_px(self, string, font_color):
+         if font_color == 'black':
+            return self.black_writer.stringlen(string)
+         if font_color == 'red':
+            return self.red_writer.stringlen(string)
+    
+class GUI_drawing:
+    def __init__(self, x_pos, y_pos, width, height, drawing_function, *args):
+        self.x_pos = x_pos
+        self.y_pos = y_pos
+        self.draw_func = drawing_function
+        self.args = args
+        self.height = height
+        self.width = width
+        self.previous_x_pos = None
+        self.previous_y_pos = None
+        gui_elements_list.append(self) #add each created object to that list
+
+    def draw_element(self):
+        self.draw_func(self.x_pos, self.y_pos,self.width, self.height, *self.args)
+    
+    def update(self):
+        self.clear_area()
+        self.draw_element()
+
+    def clear_area(self):
+        framebuffer.rect(self.x_pos, self.y_pos, self.width, self.height, 'white', fill = True)
+
+    def update_position(self, new_pos_X, new_pos_y, refresh = False):
+        self.previous_x_pos = self.x_pos
+        self.previous_y_pos = self.y_pos
+        self.clear_area() #clean previous occupied area
+        self.x_pos = new_pos_X
+        self.y_pos = new_pos_y
+        self.clear_area() #clear newly set area
+        self.draw_element()
+        if refresh is True:
+            frame_update()
+    
+    def get_coords(self):
+        return self.x_pos, self.y_pos
+
+class GUI_text:
+    
+    def __init__(self, x_pos, y_pos, font, font_color = 'black'):
+        self.y_pos = y_pos
+        self.x_pos = x_pos
+        self.font = font
+        self.text = None
+        self.color = font_color
+        self.writer = ColorWriter(my_text_display, my_text_display_red, self.font)
+        self.previous_x_pos = None
+        self.previous_y_pos = None
+        self.string_pixel_length = None
+        gui_texts_list.append(self)
+    
+    def print(self, str_text, refresh = False):
+        self.text = str_text
+        self.writer.set_font(self.font)
+        self.string_pixel_length = self.writer.get_stringlen_in_px(self.text, self.color)
+        self.clear_background(self.x_pos, self.y_pos, self.string_pixel_length, self.font.height())
+        self.writer.print(self.text, self.y_pos, self.x_pos, self.color, self.font)
+        print("print")
+        if refresh is True: 
+            frame_update()
+
+    def update(self):
+        self.print(self.text, refresh = False)
+
+    def get_text(self):
+        return(self.text)
+    
+    def get_coords(self):
+        return self.x_pos, self.y_pos
+    
+    def get_x_pos(self):
+        return self.x_pos
+    
+    def get_y_pos(self):
+        return self.y_pos
+    
+    def set_font(self, font):
+        self.writer.set_font(font)
+
+    def set_new_pos(self, new_x, new_y):
+        self.previous_x_pos = self.x_pos
+        self.previous_y_pos = self.y_pos
+
+        self.x_pos = new_x
+        self.y_pos = new_y
+        
+    #init version - just redraw:
+
+    def reprint(self, refresh = False):
+        self.clear_background(self.previous_x_pos, self.previous_y_pos, self.string_pixel_length, self.font.height()) # make white rectangle to cover old string
+        self.print(self.text, refresh)
+       
+
+    def clear_background(self, x_pos, y_pos, width, height, color = 'white', fill = True):
+        framebuffer.rect(x_pos, y_pos, width, height, color, fill) # make white rectangle to cover old string/new string
+    
+    def test_partial_update(self):
+        eink_display.wake_up()
+        eink_display.send_buffer(buf_black, buf_red)
+        eink_display.partial_refresh(self.x_pos, self.x_pos + self.string_pixel_length, self.y_pos, self.y_pos + self.font.height(), 1)
+        eink_display.sleep()
+
 color_writer = ColorWriter(my_text_display, my_text_display_red, font15_testall) 
 
-
-def eink_debug_print(string_to_print, row, column, color):
-     eink_display.reset()
-     eink_display.init()
-     
-     color_writer.print(string_to_print, row, column, color, font15_testall)
-     frame_update()
-     
-
-
-    
+   
 def print_and_color_temp_diffs(value, format_string, row, column): #positive values - "+" and red, negative - black and "-"
 
     color_writer.set_font(font12_temperature)
@@ -185,9 +289,7 @@ def print_and_color_temp_diffs(value, format_string, row, column): #positive val
     if value == 0:
         color_writer.print("", row, column, 'black')
         color_writer.print("", row, column, 'red')
-    
-  
-        
+       
   
 def show_temperature_and_load_difference(previous_meas_dict,global_dict_sensors):
         
@@ -212,7 +314,7 @@ def show_temperature_and_load_difference(previous_meas_dict,global_dict_sensors)
           
           print(f'Percent_diff:{percent_diff:.2f}%')
 
-          print_and_color_temp_diffs(percent_diff, f'{percent_diff:.2f}%', 200, 270)
+          #print_and_color_temp_diffs(percent_diff, f'{percent_diff:.2f}%', 200, 270)
      
 
 buffer_sensors_dict = {
@@ -239,18 +341,38 @@ solar_sensors_dict = {
       'solar_T3': 0
 }      
 
+mock_buffer_sensors_dict = {
+     'temp0': 59,
+     'temp1': 54,
+     'temp2': 54,
+     'temp3': 51,
+     'temp4': 50,
+     'temp5': 48,
+     'temp6': 48,
+     'temp7': 48,
+     'temp8': 50,
+     'kWh'  : 49,
+     'load_percent': 35,
+     'power': 990,
+     'update_time' : '99/99/2137 99:99'
+}
 
+mock_solar_sensors_dict = {
+      'solar_T0': 90, 
+      'solar_T1': 89, 
+      'solar_T2': 89,
+      'solar_T3': 79
+}
 
-def solar_indicator(solar_dict):
+def mock_sensors():
+     update_sensors_dict(mock_buffer_sensors_dict, buffer_sensors_dict)
+     update_sensors_dict(mock_solar_sensors_dict, solar_sensors_dict)
+
+def solar_indicator(x_pos, y_pos, solar_width, solar_height, solar_dict):
      
-     x_pos = 265
-     y_pos = 15
-     solar_width = 120
-     solar_height = 70
+     
      temperature_correction = [0, 0, 2,0]
      
-
-    
      framebuffer.rect(x_pos, y_pos, solar_width, solar_height, "black")
      framebuffer.rect(x_pos + 1, y_pos + 1, solar_width - 2, solar_height - 2, "red")
 
@@ -269,20 +391,14 @@ def solar_indicator(solar_dict):
         
         color_writer.print(f'{int(value)}°', y_pos+2, x_pos + i*t_spacing)
 
-     color_writer.print("solar", 39, 300)
      #vertical lines simulating panels separation
      framebuffer.vline(x_pos + round(solar_width/3), y_pos, solar_height, "red")
      framebuffer.vline(x_pos + round(solar_width*2/3), y_pos, solar_height, "red")
      
 
-
-
 def update_sensors_dict(dSourceSensors, dDestinationSensors): #risky - for now no handling if something is not definied 
      for sensor, value in dDestinationSensors.items():
           dDestinationSensors[sensor] = dSourceSensors[sensor]
-
-
-
 
 
 """
@@ -313,8 +429,7 @@ PSHS1000
 """
 #buffer dimensions, in m
 
-
-
+#TODO margin handling, because it causes very strange effects
 def buffer_image(x_pos, y_pos, image_height, temperature_dict):
      
     buffer_height = 2.0
@@ -327,17 +442,19 @@ def buffer_image(x_pos, y_pos, image_height, temperature_dict):
     stub_1_5inch_size = 0.0375
     stub_1inch_size = 0.025
 
+    x_offset = 30
+    y_offset = 18
+
     def draw_stub(stub_x_pos, stub_height, stub_size, stub_length_in_px):
          
          scaling_factor = image_height/buffer_height
      
          stub_y_pos = round(scaling_factor * ((buffer_height - stub_height) - stub_size/2)) #upper edge
-         stub_y_pos = stub_y_pos + y_pos
+         stub_y_pos = stub_y_pos + y_pos + y_offset
          stub_size_in_pix = round(scaling_factor * stub_size) 
          framebuffer.hline(stub_x_pos, stub_y_pos, stub_length_in_px, 'black' )
          framebuffer.hline(stub_x_pos, stub_y_pos + stub_size_in_pix, stub_length_in_px, 'black' )
          
-    
     
     lower_tempC = 30
     upper_tempC = 90
@@ -346,7 +463,7 @@ def buffer_image(x_pos, y_pos, image_height, temperature_dict):
     
     buffer_tempbar_height = round(image_height/9)  
     
-    second_wall_tank_x_pos = x_pos+ image_width
+    second_wall_tank_x_pos = x_pos+ image_width + x_offset
     #drawing stubs - test
     draw_stub(second_wall_tank_x_pos, stub_0, stub_1_5inch_size, 10)
     draw_stub(second_wall_tank_x_pos, stub_1, stub_1_5inch_size, 10)
@@ -358,77 +475,83 @@ def buffer_image(x_pos, y_pos, image_height, temperature_dict):
     #printing buffer perimeter
     bar_thickness = 3
     for layer in range(bar_thickness):    
-        framebuffer.rect(x_pos - layer, y_pos - layer, image_width + 2*layer, image_height+2*layer, 'black', False) #make one big black rectangle 
+        framebuffer.rect( x_offset+x_pos - layer, y_offset + y_pos - layer, image_width + 2*layer, image_height+2*layer, 'black', False) #make one big black rectangle 
      
     color_writer.set_font(font15_testall) 
-    color_writer.print("bufor", y_pos - 18, x_pos +3)
+    color_writer.print("bufor", y_pos, x_pos +3)
     color_writer.set_font(font12_temperature)
     
     i = 0
     #printing temperature bars
     for temp_sens, value in sorted(temperature_dict.items()):
            
-            framebuffer.rect(x_pos + 1,y_pos+i+1, round(((value - lower_tempC)/delta_tempC)*image_width), buffer_tempbar_height - 1,'red', True )
-            color_writer.print(f'{value}°',y_pos + i, x_pos-30 )
+            framebuffer.rect(x_offset + x_pos + 1,y_offset + y_pos+i+1, round(((value - lower_tempC)/delta_tempC)*image_width), buffer_tempbar_height - 1,'red', True )
+            color_writer.print(f'{value}°',y_offset+y_pos + i, x_pos )
             i = i + buffer_tempbar_height     
 
 # TODO - showing position and sizes of given graphic element (debug mode)
 
-def buffer_indicator(x_pos, y_pos, image_height, buffer_dict):
+
+
+def buffer_indicator(x_pos, y_pos, dummy_width, image_height, buffer_dict):
         
         temperatures_dict = {}
         #test_writer.set_textpos(my_text_display, 4, 4)
         #test_writer.printstring("!%()*+,-./0123456789:\n;<=>?@ABCDEFGHI\nJKLMNOPQRSTUVW \n XYZ[\]^_`abcd\nefghijklmnopqr\nstuvwxyz{|}°\nąężźćó\nĄĘŻŹĆÓ", True)
          
-        buffer_x, buffer_y = 50, 20 
-
         for sensors, values in sorted(buffer_dict.items()):
             print(sensors, values)
             if 'temp' in sensors:
                 if 'solar' not in sensors: #quick workaround for added sensor
                     temperatures_dict[sensors]=round(values)
         
-        screen_width = 400
-        screen_height = 300
-        
+        buffer_image(x_pos, y_pos, image_height, temperatures_dict)
 
-        screen_horizontal_middle = screen_width/2
+        big_fonted_avg_temperature(buffer_dict)
+        last_update_time(buffer_dict)
+        print_power(buffer_dict)
+        #percentage_load_bar(30,250, 100, 20,buffer_dict)
+        big_fonted_percentage(buffer_dict)
 
-        i = 0
-        lower_tempC = 30
-        upper_tempC = 90
-        delta_tempC = upper_tempC - lower_tempC
+          
+def big_fonted_avg_temperature(buffer_dict):
+        temperatures_dict={}
+        for sensors, values in sorted(buffer_dict.items()):
+            print(sensors, values)
+            if 'temp' in sensors:
+                if 'solar' not in sensors: #quick workaround for added sensor
+                    temperatures_dict[sensors]=round(values)
+       
         average_temperature = 0
-        
-        #printing temperature values and creating temperature bars
-
         for temp_sens, value in sorted(temperatures_dict.items()):
            
             average_temperature += value/9
-
-
-        buffer_image(x_pos, y_pos, image_height, temperatures_dict)
-
-        column = 270
-        row = 100
-        color_writer.set_font(font15_testall)
-
-        color_writer.print('średnia', row, column)
-        color_writer.print('temperatura', row+20, column)
         
-        color_writer.set_font(font42_bufferload)
-        color_writer.print(f'{int(average_temperature)}°C', row+40, column)
-        
-        
-        # percent load bar
-        percent_value = round(buffer_dict['load_percent'])
+        GUI_loadbuffer_avg_temperature.print(f'{round(average_temperature)}°C')
+
+
+def last_update_time(buffer_dict):
+    color_writer.set_font(font15_testall)
+    row = 140
+    #color_writer.print('ostatnia', row + 20, 10)
+    #color_writer.print('aktualizacja:', row + 40, 10)
+    color_writer.print(buffer_sensors_dict['update_time'],row + 60, 10)
+
+def print_power(buffer_dict):
         actual_power = round(buffer_dict['power'])
+        text_power.print(f"moc: {actual_power}W")
+
+def big_fonted_percentage(buffer_dict):
+    percent_value = round(buffer_dict['load_percent'])
+    GUI_loadbuffer_percentage.print(f'{percent_value}%')
+
+def percentage_load_bar(x_pos, y_pos, bar_width, bar_height, buffer_dict):
         
-        screen_margin_y = 10
-        bar_width = 150
-        bar_height = 30
-        load_buffer_x_pos = round(screen_horizontal_middle - bar_width/2)
-        load_bufer_y_pos = 250
+        percent_value = round(buffer_dict['load_percent'])
+       
+
+        load_buffer_x_pos = x_pos
+        load_bufer_y_pos = y_pos
         
 
         bar_thickness = 5
@@ -456,21 +579,27 @@ def buffer_indicator(x_pos, y_pos, image_height, buffer_dict):
              framebuffer.vline(load_buffer_x_pos + vline_pos, load_bufer_y_pos+1,bar_height, color)
              framebuffer.vline(load_buffer_x_pos + vline_pos+1, load_bufer_y_pos+1,bar_height, color)
 
-        color_writer.set_font(font15_testall)
-        color_writer.print(f"moc: {actual_power}W", 250, 300)
-      
-        #big fonted percent value 
-        writer_row_pos = 195
-        writer_col_pos = 160 
-        color_writer.set_font(font42_bufferload)
-        color_writer.print(f'{percent_value}%',writer_row_pos, writer_col_pos )
-       
-        
-        color_writer.set_font(font15_testall)
-        row = 140
-        color_writer.print('ostatnia', row + 20, 10)
-        color_writer.print('aktualizacja:', row + 40, 10)
-        color_writer.print(buffer_sensors_dict['update_time'],row + 60, 10)
+
+gui_elements_list = []
+gui_texts_list = []
+GUI_loadbuffer_avg_temperature = GUI_text(250, 245, font42_bufferload, 'black')
+GUI_loadbuffer_percentage = GUI_text(120, 245, font42_bufferload, 'black')
+
+  #framebuffer.rect(240, 220,3,80,'black', fill=True)
+  
+solar = GUI_drawing(15, 15, 120, 70,solar_indicator, solar_sensors_dict)  
+bufor = GUI_drawing(150,0,100, 150, buffer_indicator, buffer_sensors_dict) 
+load_bar = GUI_drawing(10, 245, 100, 42, percentage_load_bar, buffer_sensors_dict)     
+test_linia = GUI_drawing(0, 218, 400, 3, framebuffer.rect,'black', True)
+test_linia2 = GUI_drawing(240, 218, 3, 400-218, framebuffer.rect,'black', True)
+
+text_bufor = GUI_text(20, 225, font15_testall, 'black')
+text_bufor.print("naładowanie bufora:")
+
+text_power = GUI_text(10, 100,font15_testall, 'black')
+
+text_temperature = GUI_text(250, 225, font15_testall, 'black')
+text_temperature.print("śr. temperatura:")
 
 # some mingling with drawing assets as vectors
 def draw_arrow(x_pos, y_pos, width, height, color, fill = True, direction = 'up'):
@@ -505,15 +634,22 @@ def draw_arrow(x_pos, y_pos, width, height, color, fill = True, direction = 'up'
      
      framebuffer.poly(x_pos, y_pos, arrow_coords, color, fill)
      
-        
+
 
 def GUI_update():
      global solar_sensors_dict
      global buffer_sensors_dict
      global global_dict_sensors
 
-     buffer_indicator(170, 20,150,buffer_sensors_dict)
-     solar_indicator(solar_sensors_dict)   #to be changed after refactor  
+     for gui_item in gui_elements_list:
+         gui_item.update()
+
+     for text_item in gui_texts_list:
+         text_item.update()
+     #bufor.update()
+     #load_bar.update()
+     #buffer_indicator(170, 20,150,buffer_sensors_dict)
+      
      
 
 def test_mapping(dummy):
@@ -585,8 +721,8 @@ async def frame_first_update():
         current_time = time.localtime()
         formatted_time = "{:02}:{:02}:{:02}".format(current_time[3], current_time[4], current_time[5])
         framebuffer.text(formatted_time, 300, 270,'red')
-     GUI_update()
-     eink_init_deinit_execute(local_time) #this function is very unclear right now
+   
+     eink_init_deinit_execute(GUI_update) #this function is very unclear right now
 
 def debug_draw_grid():
     #50px x 50px
@@ -678,9 +814,9 @@ async def frame_update_async():
           show_temperature_and_load_difference(previous_meas_dict,global_dict_sensors)
         
           
-          current_time = time.localtime()
-          formatted_time = "{:02}:{:02}:{:02}".format(current_time[3], current_time[4], current_time[5])
-          framebuffer.text(formatted_time, 300, 270,'red')
+          #current_time = time.localtime()
+          #formatted_time = "{:02}:{:02}:{:02}".format(current_time[3], current_time[4], current_time[5])
+          #framebuffer.text(formatted_time, 300, 270,'red')
           GUI_update()
           frame_update()
           
@@ -722,17 +858,12 @@ async def main(client):
         print('Connection failed.')
         clear_framebuffers()
            
-        for i in range (9):
-            test_writer.set_textpos(my_text_display,10 + i * 14, 20 )
-            test_writer.printstring("brak połączenia przez okres 1 minuty przy starcie, restart systemu\n") 
+        
         #frame_update()
         asyncio.create_task(frame_clear_async())
        
-     
-        # TODO - proper handling of this error - it just stays here (without reset)
     n = 0
-   
-    
+
     while True:
         await asyncio.sleep(5)
         print('publish', n)
@@ -781,11 +912,11 @@ try:
 
 except OSError as eink_display:
         print("OSError:", eink_display)
-        eink_debug_print(eink_display, 1, 1, "black")
+        
         # TODO handling of those errors - when I ctr-c repl, then it goes straight to reset point
 except Exception as eink_display:
         print("exception error:", eink_display)
-        eink_debug_print(eink_display, 50, 1, "red")
+        
 finally:
     client.close()  # Prevent LmacRxBlk:1 errors
     asyncio.new_event_loop() #this works? 
