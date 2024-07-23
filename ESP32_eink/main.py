@@ -205,6 +205,12 @@ class GUI_drawing:
     
     def get_coords(self):
         return self.x_pos, self.y_pos
+    
+    def get_x_pos(self):
+        return self.x_pos
+    
+    def get_y_pos(self):
+        return self.y_pos
 
 class GUI_text:
     
@@ -330,7 +336,8 @@ buffer_sensors_dict = {
      'kWh'  : 0,
      'load_percent': 0,
      'power': 0,
-     'update_time' : ''
+     'update_time' : '',
+     'avg_temp' : 0
 
 }
 
@@ -396,8 +403,8 @@ def solar_indicator(x_pos, y_pos, solar_width, solar_height, solar_dict):
      framebuffer.vline(x_pos + round(solar_width*2/3), y_pos, solar_height, "red")
      
 
-def update_sensors_dict(dSourceSensors, dDestinationSensors): #risky - for now no handling if something is not definied 
-     for sensor, value in dDestinationSensors.items():
+def update_sensors_dict(dSourceSensors, dDestinationSensors): 
+     for sensor, value in dSourceSensors.items():
           dDestinationSensors[sensor] = dSourceSensors[sensor]
 
 
@@ -515,6 +522,7 @@ def buffer_indicator(x_pos, y_pos, dummy_width, image_height, buffer_dict):
 
           
 def big_fonted_avg_temperature(buffer_dict):
+        global g_average_temperature
         temperatures_dict={}
         for sensors, values in sorted(buffer_dict.items()):
             print(sensors, values)
@@ -526,7 +534,7 @@ def big_fonted_avg_temperature(buffer_dict):
         for temp_sens, value in sorted(temperatures_dict.items()):
            
             average_temperature += value/9
-        
+        buffer_dict['avg_temp']= average_temperature #to remove in the future
         GUI_loadbuffer_avg_temperature.print(f'{round(average_temperature)}°C')
 
 
@@ -579,6 +587,39 @@ def percentage_load_bar(x_pos, y_pos, bar_width, bar_height, buffer_dict):
              framebuffer.vline(load_buffer_x_pos + vline_pos, load_bufer_y_pos+1,bar_height, color)
              framebuffer.vline(load_buffer_x_pos + vline_pos+1, load_bufer_y_pos+1,bar_height, color)
 
+def draw_temperature_icon(x_pos, y_pos, width, height, buffer_dict):
+
+    #draw bulb with mercury
+    outer_radius = 10
+    white_gap_radius = outer_radius - 2
+    inner_red_radius = white_gap_radius - 1
+    temperature_value = buffer_dict['avg_temp']
+    right_x_pos = x_pos-round(width/2)
+    
+    #[middle_x_pos --- xpos ]
+    relative_x = x_pos 
+    relative_y = y_pos + height + inner_red_radius
+
+    framebuffer.rect(right_x_pos-2, y_pos-2, width + 4 , height, 'black', False) # 
+    framebuffer.rect(right_x_pos-3, y_pos-3, width + 6 , height, 'black', False) # 
+    
+    framebuffer.ellipse(relative_x, relative_y, outer_radius, outer_radius, 'black', True) #first black circle
+    framebuffer.ellipse(relative_x, relative_y, white_gap_radius, white_gap_radius, 'white', False)
+    framebuffer.rect(right_x_pos -1, y_pos-1, width + 2 , height, 'white', False) # white gap 
+    framebuffer.rect( right_x_pos, y_pos +1, width, height, 'red', True) #red inside
+    
+    framebuffer.ellipse(relative_x, relative_y, inner_red_radius, inner_red_radius, 'red', True) #this should be rendered in the end
+
+    #now make it do visuals:
+
+    upper_temp_margin = 100
+    lower_temp_margin = 0
+
+    height_white_bar = height -  (height * temperature_value)/(upper_temp_margin-lower_temp_margin)
+    height_white_bar = round(height_white_bar)
+    framebuffer.rect( right_x_pos, y_pos, width, height_white_bar, 'white', True) #red inside
+    print(f'executed draw_temperature_icon {temperature_value}')
+
 
 gui_elements_list = []
 gui_texts_list = []
@@ -590,8 +631,9 @@ GUI_loadbuffer_percentage = GUI_text(120, 245, font42_bufferload, 'black')
 solar = GUI_drawing(15, 15, 120, 70,solar_indicator, solar_sensors_dict)  
 bufor = GUI_drawing(150,0,100, 150, buffer_indicator, buffer_sensors_dict) 
 load_bar = GUI_drawing(10, 245, 100, 42, percentage_load_bar, buffer_sensors_dict)     
-test_linia = GUI_drawing(0, 218, 400, 3, framebuffer.rect,'black', True)
+test_linia = GUI_drawing(0, 218, 340, 3, framebuffer.rect,'black', True)
 test_linia2 = GUI_drawing(240, 218, 3, 400-218, framebuffer.rect,'black', True)
+test_linia3 = GUI_drawing(test_linia.width, 0, 3, test_linia.y_pos + 3, framebuffer.rect, 'black', True)
 
 text_bufor = GUI_text(20, 225, font15_testall, 'black')
 text_bufor.print("naładowanie bufora:")
@@ -600,6 +642,12 @@ text_power = GUI_text(10, 100,font15_testall, 'black')
 
 text_temperature = GUI_text(250, 225, font15_testall, 'black')
 text_temperature.print("śr. temperatura:")
+
+temperature_scale = GUI_drawing(375, 10, 6, 180, draw_temperature_icon, buffer_sensors_dict)
+#
+
+
+
 
 # some mingling with drawing assets as vectors
 def draw_arrow(x_pos, y_pos, width, height, color, fill = True, direction = 'up'):
