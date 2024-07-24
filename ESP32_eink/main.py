@@ -307,7 +307,7 @@ def show_temperature_and_load_difference(previous_meas_dict,global_dict_sensors)
           for sensors, values in sorted(previous_meas_dict.items()):
             print(sensors, values)
             if 'temp' in sensors: 
-                   if 'solar' not in sensors: #to be refactored
+                    if 'solar' not in sensors and 'avg' not in sensors:  #to be refactored
                      temp_difference = global_dict_sensors[sensors] - previous_meas_dict[sensors]  
                      print(f'{temp_difference}C diff')
                      temperature_diff[sensors]=temp_difference 
@@ -509,7 +509,7 @@ def buffer_indicator(x_pos, y_pos, dummy_width, image_height, buffer_dict):
         for sensors, values in sorted(buffer_dict.items()):
             print(sensors, values)
             if 'temp' in sensors:
-                if 'solar' not in sensors: #quick workaround for added sensor
+                 if 'solar' not in sensors and 'avg' not in sensors:  #quick workaround for added sensor
                     temperatures_dict[sensors]=round(values)
         
         buffer_image(x_pos, y_pos, image_height, temperatures_dict)
@@ -517,7 +517,6 @@ def buffer_indicator(x_pos, y_pos, dummy_width, image_height, buffer_dict):
         big_fonted_avg_temperature(buffer_dict)
         last_update_time(buffer_dict)
         print_power(buffer_dict)
-        #percentage_load_bar(30,250, 100, 20,buffer_dict)
         big_fonted_percentage(buffer_dict)
 
           
@@ -527,7 +526,7 @@ def big_fonted_avg_temperature(buffer_dict):
         for sensors, values in sorted(buffer_dict.items()):
             print(sensors, values)
             if 'temp' in sensors:
-                if 'solar' not in sensors: #quick workaround for added sensor
+                 if 'solar' not in sensors and 'avg' not in sensors:  #quick workaround for added sensor
                     temperatures_dict[sensors]=round(values)
        
         average_temperature = 0
@@ -619,7 +618,28 @@ def draw_temperature_icon(x_pos, y_pos, width, height, buffer_dict):
     height_white_bar = round(height_white_bar)
     framebuffer.rect( right_x_pos, y_pos, width, height_white_bar, 'white', True) #red inside
     print(f'executed draw_temperature_icon {temperature_value}')
+    temp_temperature_division(-14, -3, 7, temperature_scale)
 
+
+def temp_temperature_division(x_offset, y_offset, width, temperature_scale):
+    
+    div_x_pos = x_offset + temperature_scale.x_pos
+    div_scale_10_height = round(temperature_scale.height/10)
+    #font_offset_y = round(div_scale_10_height/2)
+    font_offset_y = round(div_scale_10_height/2) 
+    font_offset_x = 35
+
+
+    for i in range(0, 11): #big divisions (10 degres)
+      div_y_pos = y_offset + temperature_scale.y_pos + i * div_scale_10_height
+       
+      framebuffer.hline(div_x_pos,div_y_pos, width+1, 'black')
+      color_writer.set_font(font15_testall)
+      color_writer.print(f'{100 - i *10}', div_y_pos - font_offset_y , temperature_scale.x_pos - font_offset_x , 'black')
+      if i != 10:
+        framebuffer.hline(div_x_pos + round(width/2) , div_y_pos + round(div_scale_10_height/2), round(width/2)+1, 'black') # 5 degree div
+           
+#temp_temperature_division(-16, 0, 7, temperature_scale)
 
 gui_elements_list = []
 gui_texts_list = []
@@ -631,8 +651,8 @@ GUI_loadbuffer_percentage = GUI_text(120, 245, font42_bufferload, 'black')
 solar = GUI_drawing(15, 15, 120, 70,solar_indicator, solar_sensors_dict)  
 bufor = GUI_drawing(150,0,100, 150, buffer_indicator, buffer_sensors_dict) 
 load_bar = GUI_drawing(10, 245, 100, 42, percentage_load_bar, buffer_sensors_dict)     
-test_linia = GUI_drawing(0, 218, 340, 3, framebuffer.rect,'black', True)
-test_linia2 = GUI_drawing(240, 218, 3, 400-218, framebuffer.rect,'black', True)
+test_linia = GUI_drawing(0, 218, 330, 3, framebuffer.rect,'black', True)
+test_linia2 = GUI_drawing(240, test_linia.y_pos, 3, 400-test_linia.y_pos, framebuffer.rect,'black', True)
 test_linia3 = GUI_drawing(test_linia.width, 0, 3, test_linia.y_pos + 3, framebuffer.rect, 'black', True)
 
 text_bufor = GUI_text(20, 225, font15_testall, 'black')
@@ -643,7 +663,7 @@ text_power = GUI_text(10, 100,font15_testall, 'black')
 text_temperature = GUI_text(250, 225, font15_testall, 'black')
 text_temperature.print("śr. temperatura:")
 
-temperature_scale = GUI_drawing(375, 10, 6, 180, draw_temperature_icon, buffer_sensors_dict)
+temperature_scale = GUI_drawing(375, 15, 6, 180, draw_temperature_icon, buffer_sensors_dict)
 #
 
 
@@ -685,18 +705,13 @@ def draw_arrow(x_pos, y_pos, width, height, color, fill = True, direction = 'up'
 
 
 def GUI_update():
-     global solar_sensors_dict
-     global buffer_sensors_dict
-     global global_dict_sensors
-
+ 
      for gui_item in gui_elements_list:
          gui_item.update()
 
      for text_item in gui_texts_list:
          text_item.update()
-     #bufor.update()
-     #load_bar.update()
-     #buffer_indicator(170, 20,150,buffer_sensors_dict)
+  
       
      
 
@@ -753,7 +768,7 @@ def sub_cb(topic, msg, retained):
         if counter == 0: #before GUI update - to prevent from unwanted resets because of bug in buffer_ind
              asyncio.create_task(frame_first_update())
         counter += 1
-        update_sensors_dict(global_dict_sensors, buffer_sensors_dict)
+        update_sensors_dict(global_dict_sensors, buffer_sensors_dict) #probably this is not needed at all
         update_sensors_dict(global_dict_sensors, solar_sensors_dict)
         #GUI_update()
         print(counter)
@@ -869,34 +884,6 @@ async def frame_update_async():
           frame_update()
           
 
-async def simple_watchdog():
-    
-    global counter
-    import machine
-    temp_counter = 0
-    while True:
-    # TODO - here everything is to be refactored, it is not clear at all
-        while counter == 0:
-            await asyncio.sleep(60*3) #wait 1 minute - if counter is 0 (no MQTT frames )
-            if counter == 0:
-                clear_framebuffers()
-                
-                
-                frame_update()
-                print("reset after 3min from startup - no mqtt")
-                machine.reset()
-
-        temp_counter = counter # TODO: check if this makes sense at all
-
-        await asyncio.sleep(60*10)
-        if counter == temp_counter:
-            # TODO clean this up     
-            clear_framebuffers()
-           
-            frame_update()
-            print("reset from simple watchdog")  
-            machine.reset() #if there is no new mqtt message - reset - but in the future it should be error handling (mqtt server maybe down etc)
-
 
 async def main(client):
     try:
@@ -921,8 +908,6 @@ async def main(client):
         watchdog.feed()
      
           
-        
-        
         
 
 # Define configuration
