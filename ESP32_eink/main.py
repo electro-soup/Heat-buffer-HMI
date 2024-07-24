@@ -618,14 +618,13 @@ def draw_temperature_icon(x_pos, y_pos, width, height, buffer_dict):
     height_white_bar = round(height_white_bar)
     framebuffer.rect( right_x_pos, y_pos, width, height_white_bar, 'white', True) #red inside
     print(f'executed draw_temperature_icon {temperature_value}')
-    temp_temperature_division(-14, -3, 7, temperature_scale)
+    temp_temperature_division(-2*width, 0, width, temperature_scale)
 
 
 def temp_temperature_division(x_offset, y_offset, width, temperature_scale):
     
     div_x_pos = x_offset + temperature_scale.x_pos
     div_scale_10_height = round(temperature_scale.height/10)
-    #font_offset_y = round(div_scale_10_height/2)
     font_offset_y = round(div_scale_10_height/2) 
     font_offset_x = 35
 
