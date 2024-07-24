@@ -17,6 +17,28 @@ except OSError as e:
 # Upewnij się, że SPIFFS jest zamontowany poprawnie
 print("Files on SPIFFS:", uos.listdir('/spiffs'))
 
+def printProgressBar(iteration, total, prefix = '', suffix = '', decimals = 1, length = 100, fill = '█', printEnd = "\r"):
+    """
+    Call in a loop to create terminal progress bar
+    @params:
+        iteration   - Required  : current iteration (Int)
+        total       - Required  : total iterations (Int)
+        prefix      - Optional  : prefix string (Str)
+        suffix      - Optional  : suffix string (Str)
+        decimals    - Optional  : positive number of decimals in percent complete (Int)
+        length      - Optional  : character length of bar (Int)
+        fill        - Optional  : bar fill character (Str)
+        printEnd    - Optional  : end character (e.g. "\r", "\r\n") (Str)
+    """
+    percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))
+    filledLength = int(length * iteration // total)
+    bar = fill * filledLength + '-' * (length - filledLength)
+    print(f'\r{prefix} |{bar}| {percent}% {suffix}', end = printEnd)
+    # Print New Line on Complete
+    if iteration == total: 
+        print()
+
+
 def save_dual_buffers_as_bmp(black_buffer, red_buffer, width, height, filename):
     # Rozmiar obrazu w bajtach, uwzględniając wyrównanie do 4 bajtów na wiersz
     row_size = width * 3
@@ -48,6 +70,8 @@ def save_dual_buffers_as_bmp(black_buffer, red_buffer, width, height, filename):
         f.write(bmp_header)
 
         row_size_bytes = (width + 7) // 8  # liczba bajtów na wiersz w buforze bitowym
+        
+        printProgressBar(0, height -1, prefix = 'Progress:', suffix = 'Complete', length = 50)
 
         for y in range(height - 1, -1, -1):  # BMP zapisuje wiersze od dołu do góry
             row_data = bytearray()
@@ -70,3 +94,7 @@ def save_dual_buffers_as_bmp(black_buffer, red_buffer, width, height, filename):
                     row_data += bytearray([255, 255, 255])
             row_data += bytearray([0] * row_padding)  # Wyrównanie do 4 bajtów
             f.write(row_data)
+            printProgressBar(height - y -1, height-1, prefix = 'Progress:', suffix = 'Complete', length = 50)
+            
+
+            
