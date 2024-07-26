@@ -958,3 +958,26 @@ finally:
 # TODO if ecu is close to router, it keeps going blank (wifi is down)
         
 # TODO if there is no connection over long period of time - screen should be cleared once per hour
+
+def test(x_pos, y_pos,line_width,radius, width, height):
+
+    upper_line_x = x_pos+radius
+    upper_line_y = y_pos
+    left_line_x = x_pos
+    left_line_y = y_pos+radius
+    
+    horizontal_line_width = width - 2* radius
+    vertical_line_height = height - 2*radius
+    
+    #test left upper part:
+
+    #draw left and upper line:
+    framebuffer.rect(left_line_x,left_line_y,line_width,vertical_line_height,'black', True)
+    framebuffer.rect(upper_line_x,upper_line_y,horizontal_line_width,line_width,'black', True)
+
+    #and connect both and make a corner:
+    for i in range(line_width):
+        framebuffer.ellipse(upper_line_x + i, left_line_y, radius, radius, 'black',False, 0b0010)
+        framebuffer.ellipse(upper_line_x, left_line_y+i, radius, radius, 'black', False, 0b0010)
+    
+        
