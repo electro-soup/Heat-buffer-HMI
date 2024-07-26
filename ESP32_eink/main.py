@@ -959,25 +959,49 @@ finally:
         
 # TODO if there is no connection over long period of time - screen should be cleared once per hour
 
-def test(x_pos, y_pos,line_width,radius, width, height):
+def round_rectangle(x_pos, y_pos,line_width,radius_x, radius_y, width, height, color):
 
-    upper_line_x = x_pos+radius
+    upper_line_x = x_pos+radius_x
     upper_line_y = y_pos
     left_line_x = x_pos
-    left_line_y = y_pos+radius
+    left_line_y = y_pos+radius_y
     
-    horizontal_line_width = width - 2* radius
-    vertical_line_height = height - 2*radius
+    horizontal_line_width = width - 2* radius_x
+    vertical_line_height = height - 2*radius_y
     
     #test left upper part:
 
     #draw left and upper line:
-    framebuffer.rect(left_line_x,left_line_y,line_width,vertical_line_height,'black', True)
-    framebuffer.rect(upper_line_x,upper_line_y,horizontal_line_width,line_width,'black', True)
+    framebuffer.rect(left_line_x,left_line_y ,line_width,vertical_line_height,color, True)
+    framebuffer.rect(upper_line_x,upper_line_y,horizontal_line_width,line_width,color, True)
+
+    #draw right and down line:
+    framebuffer.rect(left_line_x + horizontal_line_width + 2*radius_x - line_width, left_line_y,line_width,vertical_line_height,color, True)
+    framebuffer.rect(upper_line_x,upper_line_y + vertical_line_height + 2*radius_y - line_width,horizontal_line_width ,line_width, color, True)
 
     #and connect both and make a corner:
     for i in range(line_width):
-        framebuffer.ellipse(upper_line_x + i, left_line_y, radius, radius, 'black',False, 0b0010)
-        framebuffer.ellipse(upper_line_x, left_line_y+i, radius, radius, 'black', False, 0b0010)
-    
+        #upper left
+        framebuffer.ellipse(upper_line_x + i, left_line_y, radius_x, radius_y, color,False, 0b0010)
+        framebuffer.ellipse(upper_line_x, left_line_y+i, radius_x, radius_y, color, False, 0b0010)
+        framebuffer.ellipse(upper_line_x, left_line_y, radius_x-i, radius_y-i, color, False, 0b0010) #additional circles
+        
+        right_up_corner_x = upper_line_x + horizontal_line_width -1
+
+        #upper right
+        framebuffer.ellipse(right_up_corner_x - i, left_line_y, radius_x, radius_y, color,False, 0b0001)
+        framebuffer.ellipse(right_up_corner_x, left_line_y+i, radius_x, radius_y, color, False, 0b0001)
+        framebuffer.ellipse(right_up_corner_x , left_line_y, radius_x-i, radius_y-i, color, False, 0b0001)
+        
+        right_down_corner_x = right_up_corner_x
+        down_y = left_line_y+vertical_line_height -1
+        #upper right
+        framebuffer.ellipse(right_down_corner_x - i, down_y, radius_x, radius_y, color,False, 0b1000)
+        framebuffer.ellipse(right_down_corner_x, down_y-i, radius_x, radius_y, color, False, 0b1000)
+        framebuffer.ellipse(right_down_corner_x , down_y, radius_x-i, radius_y-i, color, False, 0b1000)
+
+        #down left
+        framebuffer.ellipse(upper_line_x + i, down_y, radius_x, radius_y, color,False, 0b0100)
+        framebuffer.ellipse(upper_line_x, down_y-i, radius_x, radius_y, color, False, 0b0100)
+        framebuffer.ellipse(upper_line_x , down_y, radius_x-i, radius_y-i, color, False, 0b0100)
         
