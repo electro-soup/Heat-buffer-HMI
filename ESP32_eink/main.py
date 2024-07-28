@@ -382,6 +382,7 @@ def solar_indicator(x_pos, y_pos, solar_width, solar_height, solar_dict):
      
      framebuffer.rect(x_pos, y_pos, solar_width, solar_height, "black")
      framebuffer.rect(x_pos + 1, y_pos + 1, solar_width - 2, solar_height - 2, "red")
+     round_rectangle(x_pos, y_pos, solar_width,solar_height, 3, 10, 10, "black")
 
      t_spacing = round((solar_width - font15_testall.max_width()*2)/3)
      #print all temps in once
