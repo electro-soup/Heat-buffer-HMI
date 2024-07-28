@@ -451,7 +451,45 @@ def buffer_image(x_pos, y_pos, image_height, temperature_dict):
 
     x_offset = 30
     y_offset = 18
+    lower_tempC = 30
+    upper_tempC = 90
+    delta_tempC = upper_tempC - lower_tempC
+    image_width = round(buffer_width/buffer_height*image_height)
+    
+    
+    
+    line_thickness = 3
+      
+    #drawing order : red temp bars, then white bars which shorten red bars, at the end buffer perimeter and temps
+    color_writer.set_font(font15_testall) 
+    color_writer.print("bufor", y_pos, x_pos +3)
+    color_writer.set_font(font12_temperature)
+    
+    
+    #printing red temperature bars
+    #estimate the empty area inside for better readibility of the code:
+    empty_height = image_height - 2 *line_thickness
+    empty_width = image_width - 2*line_thickness
 
+    empty_x_pos = x_offset + x_pos + line_thickness
+    empty_y_pos =  y_offset + y_pos+ line_thickness
+
+    i = 0
+    gap_size = 2
+    buffer_tempbar_height = round((empty_height - 8*gap_size)/9)
+    
+    tempbar_spacing = buffer_tempbar_height + gap_size
+#adjust buffor image height to avoid misalignemnt because of fractionals
+    new_buffer_image_height = 2 *line_thickness + 9 * buffer_tempbar_height + 8 * gap_size
+    
+    for temp_sens, value in sorted(temperature_dict.items()):
+           
+            framebuffer.rect( empty_x_pos  ,empty_y_pos +i, round(((value - lower_tempC)/delta_tempC)*empty_width), buffer_tempbar_height,'red', True )
+            color_writer.print(f'{value}°',empty_y_pos + i, x_pos )
+            
+            i = i + tempbar_spacing 
+          
+    
     def draw_stub(stub_x_pos, stub_height, stub_size, stub_length_in_px):
          
          scaling_factor = image_height/buffer_height
@@ -463,12 +501,7 @@ def buffer_image(x_pos, y_pos, image_height, temperature_dict):
          framebuffer.hline(stub_x_pos, stub_y_pos + stub_size_in_pix, stub_length_in_px, 'black' )
          
     
-    lower_tempC = 30
-    upper_tempC = 90
-    delta_tempC = upper_tempC - lower_tempC
-    image_width = round(buffer_width/buffer_height*image_height)
-    
-    buffer_tempbar_height = round(image_height/9)  
+  
     
     second_wall_tank_x_pos = x_pos+ image_width + x_offset
     #drawing stubs - test
@@ -480,21 +513,16 @@ def buffer_image(x_pos, y_pos, image_height, temperature_dict):
 
 
     #printing buffer perimeter
-    bar_thickness = 3
-    for layer in range(bar_thickness):    
-        framebuffer.rect( x_offset+x_pos - layer, y_offset + y_pos - layer, image_width + 2*layer, image_height+2*layer, 'black', False) #make one big black rectangle 
-     
-    color_writer.set_font(font15_testall) 
-    color_writer.print("bufor", y_pos, x_pos +3)
-    color_writer.set_font(font12_temperature)
+    #test = clearing area for shaping red temp bars:
+    for y_offs in range (6):
+        round_rectangle( x_offset+x_pos, y_offset + y_pos - y_offs, image_width, new_buffer_image_height + 2* y_offs, line_thickness, round(image_width/2.3), round(image_height/12), 'white') #make one big black rectangle 
     
-    i = 0
-    #printing temperature bars
-    for temp_sens, value in sorted(temperature_dict.items()):
-           
-            framebuffer.rect(x_offset + x_pos + 1,y_offset + y_pos+i+1, round(((value - lower_tempC)/delta_tempC)*image_width), buffer_tempbar_height - 1,'red', True )
-            color_writer.print(f'{value}°',y_offset+y_pos + i, x_pos )
-            i = i + buffer_tempbar_height     
+    #draw perime
+    round_rectangle( x_offset+x_pos, y_offset + y_pos, image_width, new_buffer_image_height, line_thickness, round(image_width/2.3), round(image_height/12), 'black') #make one big black rectangle 
+    
+    
+    
+    
 
 # TODO - showing position and sizes of given graphic element (debug mode)
 
@@ -637,7 +665,60 @@ def temp_temperature_division(x_offset, y_offset, width, temperature_scale):
       color_writer.print(f'{100 - i *10}', div_y_pos - font_offset_y , temperature_scale.x_pos - font_offset_x , 'black')
       if i != 10:
         framebuffer.hline(div_x_pos + round(width/2) , div_y_pos + round(div_scale_10_height/2), round(width/2)+1, 'black') # 5 degree div
-           
+
+def round_rectangle(x_pos, y_pos, width, height, line_width,radius_x, radius_y,  color):
+
+    upper_line_x = x_pos+radius_x
+    upper_line_y = y_pos
+    left_line_x = x_pos
+    left_line_y = y_pos+radius_y
+    
+    horizontal_line_width = width - 2* radius_x
+    vertical_line_height = height - 2*radius_y
+    
+    #test left upper part:
+
+    #draw left and upper line:
+    framebuffer.rect(left_line_x,left_line_y ,line_width,vertical_line_height,color, True)
+    framebuffer.rect(upper_line_x,upper_line_y,horizontal_line_width,line_width,color, True)
+
+    #draw right and down line:
+    framebuffer.rect(left_line_x + horizontal_line_width + 2*radius_x - line_width, left_line_y,line_width,vertical_line_height,color, True)
+    framebuffer.rect(upper_line_x,upper_line_y + vertical_line_height + 2*radius_y - line_width,horizontal_line_width ,line_width, color, True)
+
+    #and connect both and make a corner:
+    for i in range(line_width):
+        #upper left
+        framebuffer.ellipse(upper_line_x + i, left_line_y, radius_x, radius_y, color,False, 0b0010)
+        framebuffer.ellipse(upper_line_x, left_line_y+i, radius_x, radius_y, color, False, 0b0010)
+        framebuffer.ellipse(upper_line_x, left_line_y, radius_x-i, radius_y-i, color, False, 0b0010) #additional circles
+        
+        right_up_corner_x = upper_line_x + horizontal_line_width -1
+
+        #upper right
+        framebuffer.ellipse(right_up_corner_x - i, left_line_y, radius_x, radius_y, color,False, 0b0001)
+        framebuffer.ellipse(right_up_corner_x, left_line_y+i, radius_x, radius_y, color, False, 0b0001)
+        framebuffer.ellipse(right_up_corner_x , left_line_y, radius_x-i, radius_y-i, color, False, 0b0001)
+        
+        right_down_corner_x = right_up_corner_x
+        down_y = left_line_y+vertical_line_height -1
+        #upper right
+        framebuffer.ellipse(right_down_corner_x - i, down_y, radius_x, radius_y, color,False, 0b1000)
+        framebuffer.ellipse(right_down_corner_x, down_y-i, radius_x, radius_y, color, False, 0b1000)
+        framebuffer.ellipse(right_down_corner_x , down_y, radius_x-i, radius_y-i, color, False, 0b1000)
+
+        #down left
+        framebuffer.ellipse(upper_line_x + i, down_y, radius_x, radius_y, color,False, 0b0100)
+        framebuffer.ellipse(upper_line_x, down_y-i, radius_x, radius_y, color, False, 0b0100)
+        framebuffer.ellipse(upper_line_x , down_y, radius_x-i, radius_y-i, color, False, 0b0100)
+''' demo:       
+>>> for i in range(50):
+...     color = 'black'
+...     if i%2 ==0:
+...         color = 'red'
+...     round_rectangle(0 + i*6, 0+i*6, 3, 15,15, 400 - 12 * i, 300 -12*i, color)
+...
+'''            
 #temp_temperature_division(-16, 0, 7, temperature_scale)
 
 gui_elements_list = []
@@ -648,7 +729,7 @@ GUI_loadbuffer_percentage = GUI_text(120, 245, font42_bufferload, 'black')
   #framebuffer.rect(240, 220,3,80,'black', fill=True)
   
 solar = GUI_drawing(15, 15, 120, 70,solar_indicator, solar_sensors_dict)  
-bufor = GUI_drawing(150,0,100, 150, buffer_indicator, buffer_sensors_dict) 
+bufor = GUI_drawing(150,0,100, 170, buffer_indicator, buffer_sensors_dict) 
 load_bar = GUI_drawing(10, 245, 100, 42, percentage_load_bar, buffer_sensors_dict)     
 test_linia = GUI_drawing(0, 218, 330, 3, framebuffer.rect,'black', True)
 test_linia2 = GUI_drawing(240, test_linia.y_pos, 3, 400-test_linia.y_pos, framebuffer.rect,'black', True)
@@ -729,7 +810,11 @@ dMQTT_function_mapping = {
     'eink_ctrl/screen_onoff':display_MQTT_control
     
 }
-        
+
+def fast_debug():
+    mock_sensors()
+    GUI_update()
+    frame_update()     
              
 
 counter = 0
@@ -803,7 +888,7 @@ def debug_draw_grid():
             framebuffer.pixel(test_x, y, 'red')
 
      for test_y in range(0,300, 50):
-        for test_x in range(0,400, 5):
+        for test_x in range(0,400, 10):
              framebuffer.pixel(test_x,test_y, 'black')
      
      frame_update()
@@ -959,49 +1044,3 @@ finally:
         
 # TODO if there is no connection over long period of time - screen should be cleared once per hour
 
-def round_rectangle(x_pos, y_pos,line_width,radius_x, radius_y, width, height, color):
-
-    upper_line_x = x_pos+radius_x
-    upper_line_y = y_pos
-    left_line_x = x_pos
-    left_line_y = y_pos+radius_y
-    
-    horizontal_line_width = width - 2* radius_x
-    vertical_line_height = height - 2*radius_y
-    
-    #test left upper part:
-
-    #draw left and upper line:
-    framebuffer.rect(left_line_x,left_line_y ,line_width,vertical_line_height,color, True)
-    framebuffer.rect(upper_line_x,upper_line_y,horizontal_line_width,line_width,color, True)
-
-    #draw right and down line:
-    framebuffer.rect(left_line_x + horizontal_line_width + 2*radius_x - line_width, left_line_y,line_width,vertical_line_height,color, True)
-    framebuffer.rect(upper_line_x,upper_line_y + vertical_line_height + 2*radius_y - line_width,horizontal_line_width ,line_width, color, True)
-
-    #and connect both and make a corner:
-    for i in range(line_width):
-        #upper left
-        framebuffer.ellipse(upper_line_x + i, left_line_y, radius_x, radius_y, color,False, 0b0010)
-        framebuffer.ellipse(upper_line_x, left_line_y+i, radius_x, radius_y, color, False, 0b0010)
-        framebuffer.ellipse(upper_line_x, left_line_y, radius_x-i, radius_y-i, color, False, 0b0010) #additional circles
-        
-        right_up_corner_x = upper_line_x + horizontal_line_width -1
-
-        #upper right
-        framebuffer.ellipse(right_up_corner_x - i, left_line_y, radius_x, radius_y, color,False, 0b0001)
-        framebuffer.ellipse(right_up_corner_x, left_line_y+i, radius_x, radius_y, color, False, 0b0001)
-        framebuffer.ellipse(right_up_corner_x , left_line_y, radius_x-i, radius_y-i, color, False, 0b0001)
-        
-        right_down_corner_x = right_up_corner_x
-        down_y = left_line_y+vertical_line_height -1
-        #upper right
-        framebuffer.ellipse(right_down_corner_x - i, down_y, radius_x, radius_y, color,False, 0b1000)
-        framebuffer.ellipse(right_down_corner_x, down_y-i, radius_x, radius_y, color, False, 0b1000)
-        framebuffer.ellipse(right_down_corner_x , down_y, radius_x-i, radius_y-i, color, False, 0b1000)
-
-        #down left
-        framebuffer.ellipse(upper_line_x + i, down_y, radius_x, radius_y, color,False, 0b0100)
-        framebuffer.ellipse(upper_line_x, down_y-i, radius_x, radius_y, color, False, 0b0100)
-        framebuffer.ellipse(upper_line_x , down_y, radius_x-i, radius_y-i, color, False, 0b0100)
-        
