@@ -514,7 +514,7 @@ def buffer_image(x_pos, y_pos, image_height, temperature_dict):
 
     #printing buffer perimeter
     #test = clearing area for shaping red temp bars:
-    for y_offs in range (6):
+    for y_offs in range (round(image_height/12)):
         round_rectangle( x_offset+x_pos, y_offset + y_pos - y_offs, image_width, new_buffer_image_height + 2* y_offs, line_thickness, round(image_width/2.3), round(image_height/12), 'white') #make one big black rectangle 
     
     #draw perime
