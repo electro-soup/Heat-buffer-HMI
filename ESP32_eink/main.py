@@ -5,7 +5,6 @@
 
 import epaper4in2
 
-
 from machine import Pin, SPI
 
 # SPIV on ESP32
@@ -232,7 +231,7 @@ class GUI_text:
         self.string_pixel_length = self.writer.get_stringlen_in_px(self.text, self.color)
         self.clear_background(self.x_pos, self.y_pos, self.string_pixel_length, self.font.height())
         self.writer.print(self.text, self.y_pos, self.x_pos, self.color, self.font)
-        print("print")
+        
         if refresh is True: 
             frame_update()
 
@@ -376,13 +375,24 @@ def mock_sensors():
      update_sensors_dict(mock_solar_sensors_dict, solar_sensors_dict)
 
 def solar_indicator(x_pos, y_pos, solar_width, solar_height, solar_dict):
-     
-     
+          
      temperature_correction = [0, 0, 2,0]
+ 
+     single_solar_width = round(solar_width/3)
      
-     framebuffer.rect(x_pos, y_pos, solar_width, solar_height, "black")
-     framebuffer.rect(x_pos + 1, y_pos + 1, solar_width - 2, solar_height - 2, "red")
-     round_rectangle(x_pos, y_pos, solar_width,solar_height, 3, 10, 10, "black")
+     space_between_panels = 5
+     
+     for i in range(3):
+        print(f'{i} loop of death')
+        round_rectangle(x_pos + i*(single_solar_width + space_between_panels), y_pos, single_solar_width, solar_height, 4, 2, 2, "black")
+        
+        round_rectangle(x_pos + i*(single_solar_width + space_between_panels) +1, y_pos +1, single_solar_width-2, solar_height-2, 1, 2, 2, "white")
+    
+        #demo of filling space with dots
+    
+        for x in range(1,single_solar_width, 2):
+           for y in range(1,solar_height, 2):
+             framebuffer.pixel(x+x_pos + i*(single_solar_width + space_between_panels),y+y_pos,'black')
 
      t_spacing = round((solar_width - font15_testall.max_width()*2)/3)
      #print all temps in once
@@ -398,10 +408,6 @@ def solar_indicator(x_pos, y_pos, solar_width, solar_height, solar_dict):
         value = solar_dict[key] + temperature_correction[i]
         
         color_writer.print(f'{int(value)}°', y_pos+2, x_pos + i*t_spacing)
-
-     #vertical lines simulating panels separation
-     framebuffer.vline(x_pos + round(solar_width/3), y_pos, solar_height, "red")
-     framebuffer.vline(x_pos + round(solar_width*2/3), y_pos, solar_height, "red")
      
 
 def update_sensors_dict(dSourceSensors, dDestinationSensors): 
@@ -686,32 +692,42 @@ def round_rectangle(x_pos, y_pos, width, height, line_width,radius_x, radius_y, 
     #draw right and down line:
     framebuffer.rect(left_line_x + horizontal_line_width + 2*radius_x - line_width, left_line_y,line_width,vertical_line_height,color, True)
     framebuffer.rect(upper_line_x,upper_line_y + vertical_line_height + 2*radius_y - line_width,horizontal_line_width ,line_width, color, True)
-
+    
+    #TODO - handling minus values (it stucks the system!) if radius is 0 or lower ( radius_y-i)
     #and connect both and make a corner:
+    def assert_one(number): #temp patch for framebuffer.ellipse 
+        if number < 1:
+            return 1
+        else:
+            return number
+
     for i in range(line_width):
+        
         #upper left
         framebuffer.ellipse(upper_line_x + i, left_line_y, radius_x, radius_y, color,False, 0b0010)
         framebuffer.ellipse(upper_line_x, left_line_y+i, radius_x, radius_y, color, False, 0b0010)
-        framebuffer.ellipse(upper_line_x, left_line_y, radius_x-i, radius_y-i, color, False, 0b0010) #additional circles
+        framebuffer.ellipse(upper_line_x, left_line_y, assert_one(radius_x-i), assert_one(radius_y-i), color, False, 0b0010) #additional circles
         
         right_up_corner_x = upper_line_x + horizontal_line_width -1
-
+        
         #upper right
         framebuffer.ellipse(right_up_corner_x - i, left_line_y, radius_x, radius_y, color,False, 0b0001)
         framebuffer.ellipse(right_up_corner_x, left_line_y+i, radius_x, radius_y, color, False, 0b0001)
-        framebuffer.ellipse(right_up_corner_x , left_line_y, radius_x-i, radius_y-i, color, False, 0b0001)
+        framebuffer.ellipse(right_up_corner_x , left_line_y, assert_one(radius_x-i), assert_one(radius_y-i), color, False, 0b0001)
         
         right_down_corner_x = right_up_corner_x
         down_y = left_line_y+vertical_line_height -1
         #upper right
         framebuffer.ellipse(right_down_corner_x - i, down_y, radius_x, radius_y, color,False, 0b1000)
         framebuffer.ellipse(right_down_corner_x, down_y-i, radius_x, radius_y, color, False, 0b1000)
-        framebuffer.ellipse(right_down_corner_x , down_y, radius_x-i, radius_y-i, color, False, 0b1000)
+        framebuffer.ellipse(right_down_corner_x , down_y, assert_one(radius_x-i), assert_one(radius_y-i), color, False, 0b1000)
 
         #down left
         framebuffer.ellipse(upper_line_x + i, down_y, radius_x, radius_y, color,False, 0b0100)
         framebuffer.ellipse(upper_line_x, down_y-i, radius_x, radius_y, color, False, 0b0100)
-        framebuffer.ellipse(upper_line_x , down_y, radius_x-i, radius_y-i, color, False, 0b0100)
+        framebuffer.ellipse(upper_line_x , down_y, assert_one(radius_x-i), assert_one(radius_y-i), color, False, 0b0100)
+        
+        
 ''' demo:       
 >>> for i in range(50):
 ...     color = 'black'
