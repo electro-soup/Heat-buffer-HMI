@@ -463,8 +463,9 @@ def buffer_image(x_pos, y_pos, image_height, temperature_dict):
     delta_tempC = upper_tempC - lower_tempC
     image_width = round(buffer_width/buffer_height*image_height)
     
+    #demo of filling space with dots
     
-    
+       
     line_thickness = 3
       
     #drawing order : red temp bars, then white bars which shorten red bars, at the end buffer perimeter and temps
@@ -486,9 +487,22 @@ def buffer_image(x_pos, y_pos, image_height, temperature_dict):
     buffer_tempbar_height = round((empty_height - 8*gap_size)/9)
     
     tempbar_spacing = buffer_tempbar_height + gap_size
-#adjust buffor image height to avoid misalignemnt because of fractionals
+    #adjust buffor image height to avoid misalignemnt because of fractionals
     new_buffer_image_height = 2 *line_thickness + 9 * buffer_tempbar_height + 8 * gap_size
+    #demo filling buffer with dots:
+    import math
+    empty_image_width = image_width - 2 *line_thickness
     
+    #radial resolution (make sure for closet pixel distance = 2)
+    resolution = 7
+
+    for alfa in range(0, 180, resolution):
+           x =  round(empty_image_width/2 - (empty_image_width/2*math.cos(math.radians(alfa))))
+           for y in range(1,new_buffer_image_height, 2):
+             framebuffer.pixel(empty_x_pos + x,y+empty_y_pos,'black')
+    
+
+
     for temp_sens, value in sorted(temperature_dict.items()):
            
             framebuffer.rect( empty_x_pos  ,empty_y_pos +i, round(((value - lower_tempC)/delta_tempC)*empty_width), buffer_tempbar_height,'red', True )
