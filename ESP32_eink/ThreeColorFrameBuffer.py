@@ -30,8 +30,23 @@ class ThreeColorFrameBuffer:
     def fill(self, color_name):
         self._apply_color("fill", color_name=color_name)
 
-    def pixel(self, x, y, color_name):
-        self._apply_color("pixel", x, y, color_name=color_name)
+    def pixel(self, x, y, color_name = None):
+        if color_name:
+            self._apply_color("pixel", x, y, color_name=color_name)
+        else:
+            # Read pixel color from both framebuffers
+            black_value = self.framebuffer_black.pixel(x, y)
+            red_value = self.framebuffer_red.pixel(x, y)
+            
+            # Determine the color based on pixel values
+            if black_value == 0 and red_value == 1:
+                return "black"
+            elif black_value == 1 and red_value == 1:
+                return "white"
+            elif black_value == 1 and red_value == 0:
+                return "red"
+            else:
+                raise ValueError("Unexpected pixel values")
 
     def hline(self, x, y, width, color_name):
         self._apply_color("hline", x, y, width, color_name=color_name)

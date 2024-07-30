@@ -380,10 +380,10 @@ def solar_indicator(x_pos, y_pos, solar_width, solar_height, solar_dict):
  
      single_solar_width = round(solar_width/3)
      
-     space_between_panels = 5
+     space_between_panels = 2
      
      for i in range(3):
-        print(f'{i} loop of death')
+      
         round_rectangle(x_pos + i*(single_solar_width + space_between_panels), y_pos, single_solar_width, solar_height, 4, 2, 2, "black")
         
         round_rectangle(x_pos + i*(single_solar_width + space_between_panels) +1, y_pos +1, single_solar_width-2, solar_height-2, 1, 2, 2, "white")
@@ -493,23 +493,57 @@ def buffer_image(x_pos, y_pos, image_height, temperature_dict):
     import math
     empty_image_width = image_width - 2 *line_thickness
     
+
+
+    def draw_dithered_rect(x, y, w, h, percent):
+          """
+            Rysuje prostokąt z ditheringiem.
+
+         :param x: współrzędna x lewego górnego rogu prostokąta
+         :param y: współrzędna y lewego górnego rogu prostokąta
+         :param w: szerokość prostokąta
+         :param h: wysokość prostokąta
+          :param percent: poziom wypełnienia w procentach (0 - white, 100 - red)
+        """
+         # Wzorzec ditheringu 4x4
+          threshold_map = [
+               [  0, 128,  32, 160],
+               [192,  64, 224,  96],
+              [ 48, 176,  16, 144],
+               [240, 112, 208,  80]
+                  ]
+
+          level = percent * 255 / 100  # Konwersja procentów na skalę 0-255
+
+          for i in range(h):
+             for j in range(w):
+                threshold = threshold_map[i % 4][j % 4]
+                color = "red" if level > threshold else "white"
+                framebuffer.pixel(x + j, y + i, color)
+
+     # draw 3D dots
     #radial resolution (make sure for closet pixel distance = 2)
-    resolution = 7
+    resolution = 10
 
     for alfa in range(0, 180, resolution):
            x =  round(empty_image_width/2 - (empty_image_width/2*math.cos(math.radians(alfa))))
            for y in range(1,new_buffer_image_height, 2):
              framebuffer.pixel(empty_x_pos + x,y+empty_y_pos,'black')
-    
-
-
+    demo = 1
+    import random
+    #draw red temperatture bars
     for temp_sens, value in sorted(temperature_dict.items()):
-           
-            framebuffer.rect( empty_x_pos  ,empty_y_pos +i, round(((value - lower_tempC)/delta_tempC)*empty_width), buffer_tempbar_height,'red', True )
+            if demo == 0:
+                framebuffer.rect( empty_x_pos  ,empty_y_pos +i, round(((value - lower_tempC)/delta_tempC)*empty_width), buffer_tempbar_height,'red', True )
             color_writer.print(f'{value}°',empty_y_pos + i, x_pos )
             
-            i = i + tempbar_spacing 
-          
+            if demo == 1:
+                draw_dithered_rect(empty_x_pos, empty_y_pos +i, empty_width, buffer_tempbar_height+gap_size, round(((value - lower_tempC)/delta_tempC*100)))
+
+            i = i + tempbar_spacing #it must stay here! 
+
+    
+   
     
     def draw_stub(stub_x_pos, stub_height, stub_size, stub_length_in_px):
          
