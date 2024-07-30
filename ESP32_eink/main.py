@@ -496,30 +496,29 @@ def buffer_image(x_pos, y_pos, image_height, temperature_dict):
 
 
     def draw_dithered_rect(x, y, w, h, percent):
-          """
-            Rysuje prostokąt z ditheringiem.
 
-         :param x: współrzędna x lewego górnego rogu prostokąta
-         :param y: współrzędna y lewego górnego rogu prostokąta
-         :param w: szerokość prostokąta
-         :param h: wysokość prostokąta
-          :param percent: poziom wypełnienia w procentach (0 - white, 100 - red)
-        """
-         # Wzorzec ditheringu 4x4
-          threshold_map = [
-               [  0, 128,  32, 160],
-               [192,  64, 224,  96],
-              [ 48, 176,  16, 144],
-               [240, 112, 208,  80]
-                  ]
+      # Wzorzec Bayera 8x8, znormalizowany do zakresu 0-255
+        threshold_map = [
+             [  0,  48,  12,  60,   3,  51,  15,  63],
+             [ 32,  16,  44,  28,  35,  19,  47,  31],
+             [  8,  56,   4,  52,  11,  59,   7,  55],
+             [ 40,  24,  36,  20,  43,  27,  39,  23],
+             [  2,  50,  14,  62,   1,  49,  13,  61],
+             [ 34,  18,  46,  30,  33,  17,  45,  29],
+             [ 10,  58,   6,  54,   9,  57,   5,  53],
+             [ 42,  26,  38,  22,  41,  25,  37,  21]
+           ]
 
-          level = percent * 255 / 100  # Konwersja procentów na skalę 0-255
+     # Przeskalowanie mapy do zakresu 0-255
+        threshold_map = [[int(val * 255 / 64) for val in row] for row in threshold_map]
 
-          for i in range(h):
-             for j in range(w):
-                threshold = threshold_map[i % 4][j % 4]
-                color = "red" if level > threshold else "white"
-                framebuffer.pixel(x + j, y + i, color)
+        level = percent * 255 / 100  # Konwersja procentów na skalę 0-255
+
+        for i in range(h):
+         for j in range(w):
+            threshold = threshold_map[i % 8][j % 8]
+            color = "red" if level > threshold else "white"
+            framebuffer.pixel(x + j, y + i, color)
 
      # draw 3D dots
     #radial resolution (make sure for closet pixel distance = 2)
