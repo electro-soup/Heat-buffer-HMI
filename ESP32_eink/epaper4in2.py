@@ -66,9 +66,9 @@ GET_STATUS                     = const(0x71)
 #AUTO_MEASURE_VCOM              = const(0x80)
 #VCOM_VALUE                     = const(0x81)
 #VCM_DC_SETTING                 = const(0x82)
-#PARTIAL_WINDOW                 = const(0x90)
-#PARTIAL_IN                     = const(0x91)
-#PARTIAL_OUT                    = const(0x92)
+PARTIAL_WINDOW                 = const(0x90)
+PARTIAL_IN                     = const(0x91)
+PARTIAL_OUT                    = const(0x92)
 #PROGRAM_MODE                   = const(0xA0)
 #ACTIVE_PROGRAM                 = const(0xA1)
 #READ_OTP_DATA                  = const(0xA2)
@@ -110,7 +110,10 @@ class EPD:
         self._command(POWER_ON)
         self.wait_until_idle()
         self._command(PANEL_SETTING, b'\x0F') # LUT from OTP
-
+        self.wait_until_idle()
+        self._command(VCOM_AND_DATA_INTERVAL_SETTING, b'\xF7') #set floating border (no border flickering) and correct LUT for colors
+        self.wait_until_idle()
+        
     def wait_until_idle(self):
         while self.busy.value() == BUSY:
             sleep_ms(100)
@@ -124,8 +127,7 @@ class EPD:
         self.rst(1)
         sleep_ms(200)
 
-    # draw the current frame memory
-    def display_frame(self, frame_buffer_black, frame_buffer_red, refresh):
+    def send_buffer(self, frame_buffer_black, frame_buffer_red):
         if (frame_buffer_black != None):
             self._command(DATA_START_TRANSMISSION_1)
             sleep_ms(2)
@@ -138,9 +140,10 @@ class EPD:
             for i in range(0, self.width * self.height // 8):
                 self._data(bytearray([frame_buffer_red[i]]))
             sleep_ms(2)
-
-        if refresh == 1:
-            self._command(DISPLAY_REFRESH)
+    # draw the current frame memory
+    def display_frame(self, frame_buffer_black, frame_buffer_red):
+        self.send_buffer(frame_buffer_black, frame_buffer_red) 
+        self._command(DISPLAY_REFRESH)
         self.wait_until_idle()
 
     # to wake call reset() or init()
@@ -149,3 +152,65 @@ class EPD:
         self._command(POWER_OFF)
         self.wait_until_idle()
         self._command(DEEP_SLEEP, b'\xA5') # check code
+    #PTSCAN OFF - strange ghost image below and above refreshed area
+    def partial_refresh(self, horizontal_bank_start, horizontal_bank_stop, vertical_bank_start, vertical_bank_stop, PT_SCAN_ON_OFF):
+        self._command(PARTIAL_IN) #enter partial refresh
+        self.wait_until_idle()
+       # self._command(PARTIAL_WINDOW)
+       
+
+        def bytearray_to_bytes(byte_array):
+            return bytes([byte for byte in byte_array])
+
+        byte_0 = (horizontal_bank_start // 0xFF) & 0x01 
+        byte_1 = (horizontal_bank_start % 0xFF)  & 0xF8
+        byte_2 = (horizontal_bank_stop // 0xFF)  & 0x01 
+        byte_3 = (horizontal_bank_stop % 0xFF)   | 0x07
+        byte_4 = (vertical_bank_start // 0xFF) & 0x01
+        byte_5 = vertical_bank_start % 0xFF 
+        byte_6 = (vertical_bank_stop // 0xFF) & 0x1
+        byte_7 = vertical_bank_stop % 0xFF 
+        byte_8 = PT_SCAN_ON_OFF 
+        
+        print(f"byte_7 {byte_7}" )
+        data_to_send = bytearray([byte_0, byte_1, byte_2, byte_3, byte_4, byte_5, byte_6, byte_7, byte_8])
+        self._command(PARTIAL_WINDOW, bytearray_to_bytes(data_to_send))
+        print(bytearray_to_bytes(data_to_send))
+        self.wait_until_idle()
+        sleep_ms(2)
+        self._command(DISPLAY_REFRESH)
+        self.wait_until_idle()
+        self._command(PARTIAL_OUT)
+        self.wait_until_idle()
+    
+    def wake_up(self):
+        self.reset()
+        self.init()
+    
+    #DDX[1:0] - 11 for proper red and black
+    #VDB - border color - 00 - black, 01 - LUTW, 10 LUTR, 11 Floating - floating gets best result, no flashing border
+    def VCOM_CDI_settings(self, VBD, CDInterval):
+         
+        def bytearray_to_bytes(byte_array):
+            return bytes([byte for byte in byte_array])
+    
+        default = 0xF7
+        byte_0 = default
+    
+         # Ustawienie bitów dla VBD (bity 7 i 8)
+        VBD_bits = VBD & 0x03  # Upewnij się, że VBD ma maksymalnie 2 bity
+        byte_0 &= ~(0x03 << 6)  # Wyczyść bity 7 i 8
+        byte_0 |= (VBD_bits << 6)  # Ustaw nowe wartości
+    
+        # Ustawienie bitów dla CDInterval (bity od 1 do 4)
+        CDInterval_bits = CDInterval & 0x0F  # Upewnij się, że CDInterval ma maksymalnie 4 bity
+        byte_0 &= ~(0x0F << 0)  # Wyczyść bity od 1 do 4
+        byte_0 |= (CDInterval_bits << 0)  # Ustaw nowe wartości
+    
+        data_to_send = bytearray([byte_0])
+        print(data_to_send)
+        self._command(VCOM_AND_DATA_INTERVAL_SETTING, bytearray_to_bytes(data_to_send))
+        print(bytearray_to_bytes(data_to_send))
+        self.wait_until_idle()
+    
+    
