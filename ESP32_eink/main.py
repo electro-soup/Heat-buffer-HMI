@@ -25,6 +25,11 @@ import GUI
 outages = 0
 temp = []
 
+#WDT setup:
+
+from machine import WDT
+minutes = 20
+watchdog = WDT(timeout = 1000 * 60 * minutes)
 
 
 
@@ -171,7 +176,6 @@ async def frame_update_async():
           GUI.frame_update()
           
 
-
 async def main(client):
     try:
         await client.connect()
@@ -194,9 +198,7 @@ async def main(client):
         n += 1
         watchdog.feed()
      
-          
-        
-
+    
 # Define configuration
 config['subs_cb'] = sub_cb
 config['wifi_coro'] = wifi_han
@@ -205,7 +207,8 @@ config['clean'] = False
 config['will'] = ('result', 'Goodbye cruel world', False, 0 )
 config['keepalive'] = 120
 config['response_time'] = 90 # TODO - what is the function
-#increasing response time fixed issue with disconnecting wifi
+#increasing response time fixed issue with disconnecting wifi !!!
+
 #init gui update
 GUI.clear_framebuffers() # TODO without it screen is red - to investigate
 GUI.GUI_update()
@@ -221,9 +224,6 @@ asyncio.create_task(heartbeat())
 asyncio.create_task(frame_update_async())
 
 
-from machine import WDT
-minutes = 20
-watchdog = WDT(timeout = 1000 * 60 * minutes)
 
 try:
     asyncio.run(main(client))
