@@ -96,7 +96,6 @@ def sub_cb(topic, msg, retained):
 
 async def frame_first_update():
      await asyncio.sleep(1) # wait a second
-     
      GUI.eink_update(GUI.GUI_update) 
 
 
@@ -166,12 +165,8 @@ async def frame_update_async():
           GUI.eink_display.reset() #it needs to be removed
           GUI.eink_display.init()
 
-          GUI.show_temperature_and_load_difference(previous_meas_dict,global_dict_sensors)
-        
-          
-          #current_time = time.localtime()
-          #formatted_time = "{:02}:{:02}:{:02}".format(current_time[3], current_time[4], current_time[5])
-          #framebuffer.text(formatted_time, 300, 270,'red')
+   
+    
           GUI.GUI_update()
           GUI.frame_update()
           

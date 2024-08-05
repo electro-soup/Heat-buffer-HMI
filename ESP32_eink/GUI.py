@@ -68,12 +68,11 @@ from ThreeColorFrameBuffer import ThreeColorFrameBuffer
 
 framebuffer = ThreeColorFrameBuffer(400, 300, fb_black, fb_red)
 
+@eink_update
 def frame_update():
-    eink_display.reset()
-    eink_display.init()
     eink_display.display_frame(buf_black,buf_red)
     print("frame update")
-    eink_display.sleep()
+    
      
 #how to handle arrays 
 #import array
