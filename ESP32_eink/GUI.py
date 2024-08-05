@@ -37,7 +37,6 @@ buf_red = bytearray(w * h // 8)
 #function/wrapper which ensures that eink display is initialised and then put to sleep after sending data to it
 def eink_update(function):
     def wrapper():
-        eink_display.reset()
         eink_display.init()
         function()
         eink_display.display_frame(buf_black, buf_red)
@@ -70,7 +69,6 @@ framebuffer = ThreeColorFrameBuffer(400, 300, fb_black, fb_red)
 
 @eink_update
 def frame_update():
-    eink_display.display_frame(buf_black,buf_red)
     print("frame update")
     
      

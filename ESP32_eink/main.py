@@ -52,6 +52,19 @@ dMQTT_function_mapping = {
 counter = 0
 global_dict_sensors = {}
 
+def check_updates(previous_dict, updated_dict):
+    #very init for now
+    #start with percentage change:
+    if updated_dict['load_percent'] != previous_dict['load_percent']:
+        print('there is a difference!')
+        return True
+    
+    #elif abs(updated_dict['solar_T0'] - previous_dict['solar_T0']) > 10:
+     #   return True
+    
+    else: 
+        return False 
+
 # Subscription callback
 def sub_cb(topic, msg, retained):
     global counter
@@ -76,16 +89,24 @@ def sub_cb(topic, msg, retained):
 
         temp_msg = msg.decode()
         temp_dict = json.loads(temp_msg)
-        print(temp_dict)
+        
+        
         global_dict_sensors = temp_dict  #copy it to the global dict (temp solution)
         GUI.framebuffer.fill('white')
        
 
         if counter == 0: #before GUI update - to prevent from unwanted resets because of bug in buffer_ind
              asyncio.create_task(frame_first_update())
+        
+        elif check_updates(global_dict_sensors, GUI.buffer_sensors_dict) == True: #if there is a change, update it immediately
+            asyncio.create_task(frame_first_update())
+
         counter += 1
-        GUI.update_sensors_dict(global_dict_sensors, GUI.buffer_sensors_dict) #probably this is not needed at all
+        
+
+        GUI.update_sensors_dict(global_dict_sensors, GUI.buffer_sensors_dict) 
         GUI.update_sensors_dict(global_dict_sensors, GUI.solar_sensors_dict)
+      
         #GUI_update()
         print(counter)
     try:
@@ -95,8 +116,11 @@ def sub_cb(topic, msg, retained):
 
 
 async def frame_first_update():
-     await asyncio.sleep(1) # wait a second
-     GUI.eink_update(GUI.GUI_update) 
+     await asyncio.sleep(1) # wait a second to exit mqtt callback
+     test =  GUI.eink_update(GUI.GUI_update)
+     test() 
+     print('!!!!! first frame update')
+     
 
 
      
@@ -138,7 +162,7 @@ async def conn_han(client):
 async def frame_update_async():
      while True:
           global counter
-
+          update_interval_minutes = 20 # screen update besides if values are changed or not
           waiting_counter = 0
           while (counter == 0):
               print(f"waiting for first mqtt frame for {waiting_counter*5}s")
@@ -160,16 +184,12 @@ async def frame_update_async():
           print("async frame update")
           previous_meas_dict = global_dict_sensors
           # TODO - check timings here and flow
-          minutes_to_wait = 5
-          await asyncio.sleep(60*minutes_to_wait)
-          GUI.eink_display.reset() #it needs to be removed
-          GUI.eink_display.init()
-
-   
-    
           GUI.GUI_update()
           GUI.frame_update()
-          
+
+          await asyncio.sleep(60*update_interval_minutes)
+         
+
 
 async def main(client):
     try:
