@@ -97,7 +97,7 @@ def sub_cb(topic, msg, retained):
 async def frame_first_update():
      await asyncio.sleep(1) # wait a second
      
-     GUI.eink_init_deinit_execute(GUI.GUI_update) #this function is very unclear right now
+     GUI.eink_update(GUI.GUI_update) 
 
 
      

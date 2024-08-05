@@ -33,13 +33,16 @@ import framebuf
 buf_black = bytearray(w * h // 8)
 buf_red = bytearray(w * h // 8)
 
-#function to be always sure that eink is handled properly - if there is no reset, then we can not update anything
-def eink_init_deinit_execute(callback):
-    eink_display.reset()
-    eink_display.init()
-    callback()
-    eink_display.display_frame(buf_black, buf_red)
-    eink_display.sleep()
+
+#function/wrapper which ensures that eink display is initialised and then put to sleep after sending data to it
+def eink_update(function):
+    def wrapper():
+        eink_display.reset()
+        eink_display.init()
+        function()
+        eink_display.display_frame(buf_black, buf_red)
+        eink_display.sleep()
+    return wrapper
 
 #creating two buffers, one for black, second for red pixels
 fb_black = framebuf.FrameBuffer(buf_black, w, h, framebuf.MONO_HLSB)
@@ -48,13 +51,14 @@ black = 0
 white = 1
 red = 0
 
+
 def clear_framebuffers():
     fb_red.fill(white)
     fb_black.fill(white)
 
-
+@eink_update
 def clear_screen():
-     eink_init_deinit_execute(clear_framebuffers)
+     clear_framebuffers()
 
 black = 0
 white = 1
