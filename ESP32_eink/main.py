@@ -163,8 +163,8 @@ async def frame_update_async():
           # TODO - check timings here and flow
           minutes_to_wait = 5
           await asyncio.sleep(60*minutes_to_wait)
-          eink_display.reset()
-          eink_display.init()
+          GUI.eink_display.reset() #it needs to be removed
+          GUI.eink_display.init()
 
           GUI.show_temperature_and_load_difference(previous_meas_dict,global_dict_sensors)
         
@@ -223,7 +223,7 @@ client = MQTTClient(config)
 asyncio.create_task(heartbeat())
 asyncio.create_task(frame_update_async())
 
-
+### main part - starting asyncio loop event
 
 try:
     asyncio.run(main(client))
@@ -237,7 +237,7 @@ except Exception as eink_display:
         
 finally:
     client.close()  # Prevent LmacRxBlk:1 errors
-    asyncio.new_event_loop() #this works? 
+    asyncio.new_event_loop() 
  
 # TODO displaying errors on eink
 # TODO sending and subscribing same topic as closed loop
