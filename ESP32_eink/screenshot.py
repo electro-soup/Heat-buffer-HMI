@@ -117,18 +117,18 @@ def qoi_write_header(filename, width, height):
     header[12] = 3  # Channels (RGB)
     header[13] = 0  # Colorspace (sRGB with linear alpha)
 
-    with open('/mnt/data/' + filename, 'wb') as f:
+    with open('/spiffs/' + filename, 'wb') as f:
         f.write(header)
 
 def qoi_write_pixel_data(filename, width, height, black_buffer, red_buffer):
     row_size_bytes = (width + 7) // 8  # liczba bajtów na wiersz w buforze bitowym
 
-    with open('/mnt/data/' + filename, 'ab') as f:
+    with open('/spiffs/' + filename, 'ab') as f:
         # Initialize the QOI index
         index = [(0, 0, 0, 255)] * 64
         run = 0
         prev_pixel = (0, 0, 0, 255)
-
+        printProgressBar(0, height -1, prefix = 'Progress:', suffix = 'Complete', length = 50)
         for y in range(height):
             for x in range(width):
                 byte_index = (y * row_size_bytes) + (x // 8)
@@ -162,7 +162,8 @@ def qoi_write_pixel_data(filename, width, height, black_buffer, red_buffer):
                         index[index_pos] = pixel
                         f.write(bytearray([QOI_OP_RGB, r, g, b]))
                 prev_pixel = pixel
-
+            printProgressBar(y, height-1, prefix = 'Progress:', suffix = 'Complete', length = 50)    
+        
         if run > 0:
             f.write(bytearray([QOI_OP_RUN | (run - 1)]))
 
