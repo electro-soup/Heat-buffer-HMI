@@ -97,4 +97,78 @@ def save_dual_buffers_as_bmp(black_buffer, red_buffer, width, height, filename):
             printProgressBar(height - y -1, height-1, prefix = 'Progress:', suffix = 'Complete', length = 50)
             
 
-            
+#QOI compression
+
+# QOI format constants
+QOI_HEADER_SIZE = 14
+QOI_PADDING_SIZE = 8
+QOI_OP_RGB = 0xFE
+QOI_OP_INDEX = 0x00
+QOI_OP_DIFF = 0x40
+QOI_OP_LUMA = 0x80
+QOI_OP_RUN = 0xC0
+QOI_OP_MASK = 0xC0
+
+def qoi_write_header(filename, width, height):
+    header = bytearray(14)
+    header[0:4] = b'qoif'  # Magic number
+    header[4:8] = width.to_bytes(4, 'big')
+    header[8:12] = height.to_bytes(4, 'big')
+    header[12] = 3  # Channels (RGB)
+    header[13] = 0  # Colorspace (sRGB with linear alpha)
+
+    with open('/mnt/data/' + filename, 'wb') as f:
+        f.write(header)
+
+def qoi_write_pixel_data(filename, width, height, black_buffer, red_buffer):
+    row_size_bytes = (width + 7) // 8  # liczba bajtów na wiersz w buforze bitowym
+
+    with open('/mnt/data/' + filename, 'ab') as f:
+        # Initialize the QOI index
+        index = [(0, 0, 0, 255)] * 64
+        run = 0
+        prev_pixel = (0, 0, 0, 255)
+
+        for y in range(height):
+            for x in range(width):
+                byte_index = (y * row_size_bytes) + (x // 8)
+                bit_index = 7 - (x % 8)
+
+                black_bit = (black_buffer[byte_index] >> bit_index) & 1
+                red_bit = (red_buffer[byte_index] >> bit_index) & 1
+
+                # Kombinacja wartości z obu buforów z priorytetem dla czerwonego
+                if red_bit == 0:
+                    pixel = (255, 0, 0, 255)  # Czerwony
+                elif black_bit == 0:
+                    pixel = (0, 0, 0, 255)  # Czarny
+                else:
+                    pixel = (255, 255, 255, 255)  # Biały
+
+                if pixel == prev_pixel:
+                    run += 1
+                    if run == 62:
+                        f.write(bytearray([QOI_OP_RUN | (run - 1)]))
+                        run = 0
+                else:
+                    if run > 0:
+                        f.write(bytearray([QOI_OP_RUN | (run - 1)]))
+                        run = 0
+                    r, g, b, a = pixel
+                    index_pos = (r * 3 + g * 5 + b * 7 + a * 11) % 64
+                    if index[index_pos] == pixel:
+                        f.write(bytearray([QOI_OP_INDEX | index_pos]))
+                    else:
+                        index[index_pos] = pixel
+                        f.write(bytearray([QOI_OP_RGB, r, g, b]))
+                prev_pixel = pixel
+
+        if run > 0:
+            f.write(bytearray([QOI_OP_RUN | (run - 1)]))
+
+        # Add the QOI end marker
+        f.write(bytearray([0, 0, 0, 0, 0, 0, 0, 1]))
+
+def save_dual_buffers_as_qoi(black_buffer, red_buffer, width, height, filename):
+    qoi_write_header(filename, width, height)
+    qoi_write_pixel_data(filename, width, height, black_buffer, red_buffer)
