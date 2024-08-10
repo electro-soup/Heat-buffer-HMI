@@ -7,7 +7,8 @@ Very alpha phase, but something is working ;) It can even do screenshots of GUI 
 
 Here is progress in GUI development:
 
-![test](https://github.com/user-attachments/assets/1571a8e6-325b-4fea-bb99-c05deeb5f775)
+![out](https://github.com/user-attachments/assets/94cccd18-edb6-453c-bac4-58abfc5a233b)
+
 
 And how screen looks like:
 ![image](https://github.com/electro-soup/Heat-buffer-HMI/assets/16262155/740319c2-2b96-479b-804f-69a5b0ff3c9d)
