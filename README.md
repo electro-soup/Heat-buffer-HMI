@@ -21,7 +21,10 @@ Here is progress in GUI development:
 
 
 And how physical screen looks like:
-![image](https://github.com/electro-soup/Heat-buffer-HMI/assets/16262155/740319c2-2b96-479b-804f-69a5b0ff3c9d)
+
+![IMG_20240812_135110](https://github.com/user-attachments/assets/e44c194d-866a-4274-bd10-59dc6bf561d2)
+
+
 
 # System flow:
 ```mermaid
