@@ -6,53 +6,79 @@ pwm0 = PWM(Pin(5), freq=75, duty_u16=32768) # create PWM object from a pin
 pwm1 = PWM(Pin(6), freq= 1000, duty_u16 = 32768)
 
 duty_u16 = 1
-class PWM_meas():
-    def __init__(self, pin, PWM_freq, timer, name = None):
-        self.high_pulse_counter = 0
-        self.low_pulse_counter = 0
-        self.high_pulse_end = 0
-        self.counter = 0
-        self.PWM_freq = PWM_freq
-        self.PWM_sampling = self.PWM_freq * 10
-        self.pin = pin
-        self.timer = timer
-        self.name = name
-        self.duty = 0
-        self.timer.init(mode = Timer.PERIODIC, freq = self.PWM_sampling, callback = self.timer_cb)
-    
-    def timer_cb(self, tim):
 
-        if self.pin.value() == 1:
-              self.high_pulse_counter += 1
-        else:
-              self.low_pulse_counter +=1 
-        self.counter += 1
+high_pulses_75 = 0
+low_pulses_75 = 0
+high_pulses_end_75 = 0
+total_pulses_75 = 0
+total_pulses_end_75 = 0
+high_pulses_1000 = 0
+low_pulses_1000 = 0
+high_pulses_end_1000 = 0
+total_pulses_1000 = 0
+total_pulses_end_1000 = 0
+pin_75Hz = Pin(1, Pin.IN)
+pin_1000Hz = Pin(0, Pin.IN)
 
-        if self.counter > self.PWM_sampling - 1:
-             self.high_pulse_end = self.high_pulse_counter
-             self.counter = 0
-             self.low_pulse_counter = 0
-             self.high_pulse_counter = 0
+def change_pwm(step_percent):
+        percent_pulses = round(65535/100)
+        duty= pwm0.duty_u16()
+        new_duty = duty + round(percent_pulses * step_percent)
+        if new_duty>65535:
+                new_duty = 2
+        pwm0.duty_u16(new_duty)
+        pwm1.duty_u16(new_duty)
+        print(f"PWMout duty:f{new_duty/65536 * 100}%")
 
-    def get_duty(self):
-         self.duty = self.high_pulse_end/self.PWM_sampling * 100
-         print(self.duty)
-         
-    def debug(self):
-         self.duty = self.high_pulse_end/self.PWM_sampling * 100
-         print(f'name:{self.name}, timer:{self.timer},duty: {self.duty}%, counter: {self.counter}, high pulses: {self.high_pulse_counter}, low:{self.low_pulse_counter}')
-#only 0 and 2 timers are working - 1 does nothin, 3 causes panick
-test_feedback = PWM_meas(Pin(1, Pin.IN), 75, Timer(0), "feedback z pompy")
-test_pompa = PWM_meas(Pin(0, Pin.IN),1000,Timer(2),"pwm do pompy")
+def timer_callback_75Hz(t):
+       global high_pulses_75, total_pulses_75
+       high_pulses_75 += pin_75Hz.value()
+       total_pulses_75 +=1
+   
+def timer_callback_1000Hz(t):
+       global high_pulses_1000, total_pulses_1000
+       high_pulses_1000 += pin_1000Hz.value()
+       total_pulses_1000 +=1
+       
+
+
+def measure_duty_75(timer, PWM_freq, callback, sleep_time):
+     global high_pulses_75, total_pulses_75
+     
+
+     timer.init(mode = Timer.PERIODIC, freq = PWM_freq * 200, callback = callback)
+     
+     time.sleep(sleep_time)
+     timer.deinit()
+     duty = high_pulses_75/total_pulses_75 * 100
+     print(f"freq: {PWM_freq}, duty = {duty}%, high:{high_pulses_75}, total:{total_pulses_75}, fs = {total_pulses_75/sleep_time}S/s")
+     high_pulses_75 = 0
+     total_pulses_75 = 0
+
+def measure_duty_1000(timer, PWM_freq, callback, sleep_time):
+     global high_pulses_1000, total_pulses_1000
+     
+
+     timer.init(mode = Timer.PERIODIC, freq = PWM_freq * 50, callback = callback)
+     print(f"sleep time {sleep_time}")
+     time.sleep(sleep_time)
+     timer.deinit()
+     duty = high_pulses_1000/total_pulses_1000 * 100
+     print(f"freq: {PWM_freq}, duty = {duty}%, high:{high_pulses_1000}, total:{total_pulses_1000}, fs = {total_pulses_1000/sleep_time}S/s")
+     high_pulses_1000 = 0
+     total_pulses_1000 = 0
+     
+
+sleep_time = 0.1
 while True:
         time.sleep(0.9)
-        state = machine.disable_irq()
-        test_feedback.debug()
+        timer = Timer(0)
+        timer2 = Timer(2)
+
+        change_pwm(1)
+        #polling timers during loop: first 75Hz wave
+        measure_duty_75(timer,75, timer_callback_75Hz,0.4)
+        measure_duty_1000(timer2,1000, timer_callback_1000Hz,0.2)
+        print('\n')
         
-        test_pompa.debug()
-        pwm0.duty_u16(duty_u16)
-        pwm1.duty_u16(duty_u16)
-        duty_u16 += 1200
-        if duty_u16 > 65000:
-             duty_u16 = 1
-        machine.enable_irq(state)
+        
