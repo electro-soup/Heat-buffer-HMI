@@ -92,18 +92,94 @@ uart_solar_dict = {
 }
 
 
-while True:
-        time.sleep(0.9)
+
+   
+# clean.py Test of asynchronous mqtt client with clean session False.
+# (C) Copyright Peter Hinch 2017-2022.
+# Released under the MIT licence.
+
+# Public brokers https://github.com/mqtt/mqtt.github.io/wiki/public_brokers
+
+# The use of clean_session = False means that during a connection failure
+# the broker will queue publications with qos == 1 to the device. When
+# connectivity is restored these will be transmitted. If this behaviour is not
+# required, use a clean session (clean.py). (MQTT spec section 3.1.2.4).
+
+# red LED: ON == WiFi fail
+# blue LED heartbeat: demonstrates scheduler is running.
+# Publishes connection statistics.
+
+from mqtt_as import MQTTClient
+from mqtt_local import wifi_led, blue_led, config
+import uasyncio as asyncio
+
+outages = 0
+watchdog = machine.WDT(timeout = 1000 * 60 * 1)
+# Demonstrate scheduler is operational.
+async def heartbeat():
+    s = True
+    while True:
+        await asyncio.sleep_ms(500)
+        blue_led(s)
+        s = not s
+
+def sub_cb(topic, msg, retained):
+    print(f'Topic: "{topic.decode()}" Message: "{msg.decode()}" Retained: {retained}')
+
+async def wifi_han(state):
+    global outages
+    wifi_led(not state)
+    if state:
+        print('WiFi is up.')
+    else:
+        outages += 1
+        print('WiFi is down.')
+    await asyncio.sleep(1)
+
+async def main(client):
+    try:
+        await client.connect()
+    except OSError:
+        print('Connection failed.')
+        return
+    
+    n = 0
+    while True:
+        watchdog.feed()
+        
         timer = Timer(0)
         timer2 = Timer(2)
         
 
         #change_pwm(1)
         #polling timers during loop: first 75Hz wave
-        duty_75 = round( measure_duty_75(timer,75, timer_callback_75Hz,0.4))
-        duty_1000 = round(measure_duty_1000(timer2,1000, timer_callback_1000Hz,0.2))
-        measure_duty_1000(timer2,1000, timer_callback_1000Hz_direct,0.2 )
+        uart_solar_dict['duty_feedback_%'] = round( measure_duty_75(timer,75, timer_callback_75Hz,0.4))
+        # round(measure_duty_1000(timer2,1000, timer_callback_1000Hz,0.2))
+        uart_solar_dict['duty_solar_pump_%'] = measure_duty_1000(timer2,1000, timer_callback_1000Hz_direct,0.2 )
      
+        await client.publish('solar_pwm', json.dumps(uart_solar_dict), qos = 0)
+        await asyncio.sleep(5)
+        print('publish', n)
+        # If WiFi is down the following will pause for the duration.
         
-        
-        time.sleep(5)
+        n += 1
+
+# Define configuration
+config['subs_cb'] = sub_cb
+config['wifi_coro'] = wifi_han
+config['clean'] = False
+config['will'] = ('result', 'Goodbye cruel world!', False, 0)
+config['keepalive'] = 120
+config['response_time'] = 90 
+
+asyncio.create_task(heartbeat())
+# Set up client
+MQTTClient.DEBUG = True  # Optional
+client = MQTTClient(config)
+
+try:
+    asyncio.run(main(client))
+
+finally:  # Prevent LmacRxBlk:1 errors.
+    client.close()
+    asyncio.new_event_loop()
