@@ -84,13 +84,48 @@ def measure_duty_1000(timer, PWM_freq, callback, sleep_time):
 sleep_time = 0.1
 
 
-uart_solar_dict = {
+mqtt_solar_dict = {
        'freq_solar_pump_Hz': 1000,
-       'duty_solar_pump_%': 0,
-       'freq_feedback_%': 75,
-       'duty_feedback_%':0
+       'PWM_duty_solar_pump_%': 0,
+       'Tech_driver_percent_value':0,
+       'freq_feedback_Hz': 75,
+       'PWM_duty_feedback_%':0,
+       'solar_power_W' : 0,
+       'pump_power_W' : 0,
+       'pump_state' : "", 
+       'pump_gear' : 4
 }
 
+def pump_power_and_state(solar_dict):
+     
+     pump_state = ""
+     pump_power = 0
+     pump_duty_key = 'PWM_duty_feedback_%'
+     pump_duty = solar_dict[pump_duty_key]
+
+     if 0 <= pump_duty <= 70:
+          pump_power = pump_power
+     #acc do spec - 2% precision
+     #value 75% - D - Warning - voltage  below nominal level
+     elif 73 <= pump_duty <= 77:
+        
+        pump_state = "Warning - voltage out of range"
+    # value 85% - C - alarm - pump stopped - electronic failure
+     elif 83 <= pump_duty <= 87:
+    
+          pump_state = "Alarm! - pump stopped - electronic failure"
+    # 90% - B- alarm - pump stopped - pump is clogged
+     elif 88 < pump_duty < 92:
+          pump_state = "Alarm! - pump is clogged!"
+     # 95% - A - idle
+     elif 93 <= pump_duty <= 97:
+          pump_state = "idle"
+     elif pump_duty > 97:
+          pump_state = "off"
+
+     #update dictonary:
+     solar_dict['pump_power_W'] = pump_power
+     solar_dict['pump_state'] = pump_state
 
 
    
@@ -135,7 +170,8 @@ async def wifi_han(state):
         outages += 1
         print('WiFi is down.')
     await asyncio.sleep(1)
-
+timer = Timer(0)
+timer2 = Timer(2)
 async def main(client):
     try:
         await client.connect()
@@ -147,17 +183,17 @@ async def main(client):
     while True:
         watchdog.feed()
         
-        timer = Timer(0)
-        timer2 = Timer(2)
+        
         
 
         #change_pwm(1)
         #polling timers during loop: first 75Hz wave
-        uart_solar_dict['duty_feedback_%'] = round( measure_duty_75(timer,75, timer_callback_75Hz,0.4))
+        mqtt_solar_dict['duty_feedback_%'] = round( measure_duty_75(timer,75, timer_callback_75Hz,0.4))
         # round(measure_duty_1000(timer2,1000, timer_callback_1000Hz,0.2))
-        uart_solar_dict['duty_solar_pump_%'] = measure_duty_1000(timer2,1000, timer_callback_1000Hz_direct,0.2 )
-     
-        await client.publish('solar_pwm', json.dumps(uart_solar_dict), qos = 0)
+        mqtt_solar_dict['duty_solar_pump_%'] = measure_duty_1000(timer2,1000, timer_callback_1000Hz_direct,0.2 )
+        
+        pump_power_and_state(mqtt_solar_dict)
+        await client.publish('solar_pwm', json.dumps(mqtt_solar_dict), qos = 0)
         await asyncio.sleep(5)
         print('publish', n)
         # If WiFi is down the following will pause for the duration.
