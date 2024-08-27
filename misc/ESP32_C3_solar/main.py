@@ -87,7 +87,7 @@ sleep_time = 0.1
 mqtt_solar_dict = {
        'freq_solar_pump_Hz': 1000,
        'PWM_duty_solar_pump_%': 0,
-       'Tech_driver_percent_value':0,
+       'TECH_driver_percent_value':0,
        'freq_feedback_Hz': 75,
        'PWM_duty_feedback_%':0,
        'solar_power_W' : 0,
@@ -99,36 +99,76 @@ mqtt_solar_dict = {
 def pump_power_and_state(solar_dict):
      
      pump_state = ""
+     pump_state_description = ""
      pump_power = 0
-     pump_duty_key = 'PWM_duty_feedback_%'
-     pump_duty = solar_dict[pump_duty_key]
+     key_pump_duty = 'duty_feedback_%'
+     key_pump_power = 'pump_power_W'
+     key_pump_state = 'pump_state'
+
+     pump_duty = solar_dict[key_pump_duty]
 
      if 0 <= pump_duty <= 70:
-          pump_power = pump_power
+          pump_power = pump_duty
+          pump_state = 'E'
+          pump_state_description = "pump working"
      #acc do spec - 2% precision
      #value 75% - D - Warning - voltage  below nominal level
      elif 73 <= pump_duty <= 77:
-        
-        pump_state = "Warning - voltage out of range"
+        pump_state = 'D'
+        pump_state_description = "Warning - voltage out of range"
     # value 85% - C - alarm - pump stopped - electronic failure
      elif 83 <= pump_duty <= 87:
-    
-          pump_state = "Alarm! - pump stopped - electronic failure"
+          pump_state = 'C'
+          pump_state_description = "Alarm! - pump stopped - electronic failure"
     # 90% - B- alarm - pump stopped - pump is clogged
      elif 88 < pump_duty < 92:
-          pump_state = "Alarm! - pump is clogged!"
+          pump_state = 'B'
+          pump_state_description = "Alarm! - pump is clogged!"
      # 95% - A - idle
      elif 93 <= pump_duty <= 97:
-          pump_state = "idle"
+          pump_state = 'A'
+          pump_state_description = "idle"
      elif pump_duty > 97:
-          pump_state = "off"
+          pump_state = '_'
+          pump_state_description = "off"
+     else:
+          pump_state_description = "undefinied"
 
      #update dictonary:
-     solar_dict['pump_power_W'] = pump_power
-     solar_dict['pump_state'] = pump_state
+     solar_dict[key_pump_power] = pump_power
+     solar_dict[key_pump_state] = pump_state
+     solar_dict['pump_state_descr'] =pump_state_description
 
+def solar_power(solar_dict):
+        percent_shift_value = 14
+        alfa = 0.7474
+        flow_at_100_percent = 12
+        key_pump_gear = 'pump_gear'
+        key_PWM_duty = 'duty_solar_pump_%'
+        key_driver_calculated_duty = 'TECH_driver_percent_value'
+        key_calculated_power = 'solar_power_W'
+        key_water_per_minute = 'water_per_minute'
+        water_per_minute = 0 
+        calculated_delta = 0
 
-   
+        calculated_duty = 0
+        calculated_power=0
+        #calculate internal duty used by solar pump driver  
+        # 15% PWM ~ 1% of internal duty, 88% - 100%
+        #   
+        PWM_duty = solar_dict[key_PWM_duty]
+        if PWM_duty > 14:
+            calculated_duty = (PWM_duty- percent_shift_value) / alfa
+            water_per_minute = 0.133333 * calculated_duty * flow_at_100_percent
+            calculated_delta = calculated_duty * solar_dict[key_pump_gear] * 0.1
+            calculated_power = 4190 * calculated_delta * water_per_minute/60
+
+        #update dictonary:
+        solar_dict[key_calculated_power] = calculated_power
+        solar_dict['delta_temp_C'] = calculated_delta
+        solar_dict[key_driver_calculated_duty] = calculated_duty
+        solar_dict[key_water_per_minute] = water_per_minute
+        
 # clean.py Test of asynchronous mqtt client with clean session False.
 # (C) Copyright Peter Hinch 2017-2022.
 # Released under the MIT licence.
@@ -193,8 +233,10 @@ async def main(client):
         mqtt_solar_dict['duty_solar_pump_%'] = measure_duty_1000(timer2,1000, timer_callback_1000Hz_direct,0.2 )
         
         pump_power_and_state(mqtt_solar_dict)
+        solar_power(mqtt_solar_dict)
+
         await client.publish('solar_pwm', json.dumps(mqtt_solar_dict), qos = 0)
-        await asyncio.sleep(5)
+        await asyncio.sleep(4.4)
         print('publish', n)
         # If WiFi is down the following will pause for the duration.
         
