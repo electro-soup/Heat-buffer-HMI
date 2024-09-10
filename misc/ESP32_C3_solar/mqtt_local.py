@@ -23,7 +23,8 @@ if platform == 'esp8266' or platform == 'esp32':
             pin(not v)  # Active low on ESP8266
         return pin if active else func
     #wifi_led = ledfunc(Pin(0, Pin.OUT, value = 0))  # Red LED for WiFi fail/not ready yet
-    blue_led = ledfunc(Pin(8, Pin.OUT, value = 1))  # Message received
+    blue_led = ledfunc(Pin(8, Pin.OUT, value = 0), 1)  # Message received
+    wifi_led = lambda _ : None
     # Example of active high LED on UM Feather S3
     # blue_led = ledfunc(Pin(13, Pin.OUT, value = 0), 1)  # Message received ESP32-S3
 elif platform == 'pyboard':

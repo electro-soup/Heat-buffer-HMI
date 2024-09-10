@@ -93,7 +93,7 @@ mqtt_solar_dict = {
        'solar_power_W' : 0,
        'pump_power_W' : 0,
        'pump_state' : "", 
-       'pump_gear' : 4
+       'pump_gear' : 10
 }
 
 def pump_power_and_state(solar_dict):
@@ -159,7 +159,7 @@ def solar_power(solar_dict):
         PWM_duty = solar_dict[key_PWM_duty]
         if PWM_duty > 14:
             calculated_duty = (PWM_duty- percent_shift_value) / alfa
-            water_per_minute = 0.133333 * calculated_duty * flow_at_100_percent
+            water_per_minute =  calculated_duty*10/99 + 2 - 10/99 #calculated from 2l - 1%, 12l - 100%
             calculated_delta = calculated_duty * solar_dict[key_pump_gear] * 0.1
             calculated_power = 4190 * calculated_delta * water_per_minute/60
 
