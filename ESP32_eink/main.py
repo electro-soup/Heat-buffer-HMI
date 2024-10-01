@@ -83,9 +83,6 @@ def sub_cb(topic, msg, retained):
     #TODO - dictionary of topics and connected function for them
     if decoded_topic == 'home/kotlownia/bufor':
         
-        #test debug output with Mono3x3
-        GUI.color_writer.set_font(GUI.font3Mono)
-         
 
         temp_msg = msg.decode()
         temp_dict = json.loads(temp_msg)
@@ -98,7 +95,13 @@ def sub_cb(topic, msg, retained):
         if counter == 0: #before GUI update - to prevent from unwanted resets because of bug in buffer_ind
              asyncio.create_task(frame_first_update())
         
-        elif check_updates(global_dict_sensors, GUI.buffer_sensors_dict) == True: #if there is a change, update it immediately
+        elif check_updates(global_dict_sensors, GUI.buffer_sensors_dict) == True: #if there is a change, update it immediately 
+            delta = global_dict_sensors['load_percent'] - GUI.buffer_sensors_dict['load_percent']
+            if delta > 0:
+                
+                GUI.draw_arrow(215, 260, 15, 20, 'red')
+            else:
+                GUI.draw_arrow(215, 260, 15, 20, 'black', True, 'down')
             asyncio.create_task(frame_first_update())
 
         counter += 1
