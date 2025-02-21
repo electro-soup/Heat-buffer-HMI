@@ -88,7 +88,7 @@ def sub_cb(topic, msg, retained):
         temp_dict = json.loads(temp_msg)
         
         
-        global_dict_sensors = temp_dict  #copy it to the global dict (temp solution)
+        global_dict_sensors = temp_dict  #copy it to the global dict (temp solution) 
         GUI.framebuffer.fill('white')
        
 
@@ -112,10 +112,10 @@ def sub_cb(topic, msg, retained):
       
         #GUI_update()
         print(counter)
-    try:
-        dMQTT_function_mapping[decoded_topic](eval_dict) #it completely brokes that function 
-    except:
-        print(f"internal error for function mapped for {eval_dict}")
+    #try: #function mapping demo
+    #    dMQTT_function_mapping[decoded_topic](eval_dict) #it completely brokes that function 
+    #except:
+    #    print(f"internal error for function mapped for {eval_dict}")
 
 
 async def frame_first_update():
@@ -155,11 +155,14 @@ async def wifi_han(state):
         counter = 0 #reset counter, to show dipslay if mqtt is reestablished
     await asyncio.sleep(1)
     
+
 # If you connect with clean_session True, must re-subscribe (MQTT spec 3.1.2.4)
 async def conn_han(client):
     await client.subscribe('foo_topic', 1)
     await client.subscribe('home/kotlownia/bufor', 0)
     await client.subscribe('eink_ctrl/screen_onoff', 0)
+    await client.subscribe('solar_pwm', 0)
+    
 
 
 async def frame_update_async():
