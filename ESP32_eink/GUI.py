@@ -472,10 +472,10 @@ def buffer_image(x_pos, y_pos, image_height, temperature_dict):
     empty_image_width = image_width - 2 *line_thickness
     
 
-
+#function created with help of chatGPT
     def draw_dithered_rect(x, y, w, h, percent):
     #https://medium.com/the-bkpt/dithered-shading-tutorial-29f57d06ac39
-      # Wzorzec Bayera 8x8, znormalizowany do zakresu 0-255
+      # Bayer pattern 8x8, normalised to range 0-255
         threshold_map = [
              [  0,  48,  12,  60,   3,  51,  15,  63],
              [ 32,  16,  44,  28,  35,  19,  47,  31],
@@ -487,7 +487,7 @@ def buffer_image(x_pos, y_pos, image_height, temperature_dict):
              [ 42,  26,  38,  22,  41,  25,  37,  21]
            ]
 
-     # Przeskalowanie mapy do zakresu 0-255
+     # scaling map to 0-255
         threshold_map = [[int(val * 255 / 64) for val in row] for row in threshold_map]
 
         level = percent * 255 / 100  # Konwersja procentów na skalę 0-255
@@ -506,8 +506,9 @@ def buffer_image(x_pos, y_pos, image_height, temperature_dict):
            x =  round(empty_image_width/2 - (empty_image_width/2*math.cos(math.radians(alfa))))
            for y in range(1,new_buffer_image_height, 2):
              framebuffer.pixel(empty_x_pos + x,y+empty_y_pos,'black')
+    
     demo = 1
-    import random
+    
     #draw red temperatture bars
     for temp_sens, value in sorted(temperature_dict.items()):
             if demo == 0:
@@ -751,7 +752,7 @@ def round_rectangle(x_pos, y_pos, width, height, line_width,radius_x, radius_y, 
         
 
 
-gui_elements_list = []
+gui_elements_list = [] #TODO - changing it to dict
 gui_texts_list = []
 GUI_loadbuffer_avg_temperature = GUI_text(250, 245, font42_bufferload, 'black')
 GUI_loadbuffer_percentage = GUI_text(120, 245, font42_bufferload, 'black')
@@ -802,7 +803,7 @@ def draw_arrow(x_pos, y_pos, width, height, color, fill = True, direction = 'up'
          (x_zero_coord, y_middle), #point_5
          (round(width/3), y_middle) #point_6
         ]
-     # Rozpakowanie krotek do jednej listy
+     # upacking tuple to list
      flattened_points = [value for point in points for value in point]
      arrow_coords = array.array('h', flattened_points)
      

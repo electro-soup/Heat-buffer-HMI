@@ -83,22 +83,25 @@ def sub_cb(topic, msg, retained):
     #TODO - dictionary of topics and connected function for them
     if decoded_topic == 'home/kotlownia/bufor':
         
-        #test debug output with Mono3x3
-        GUI.color_writer.set_font(GUI.font3Mono)
-         
 
         temp_msg = msg.decode()
         temp_dict = json.loads(temp_msg)
         
         
-        global_dict_sensors = temp_dict  #copy it to the global dict (temp solution)
+        global_dict_sensors = temp_dict  #copy it to the global dict (temp solution) 
         GUI.framebuffer.fill('white')
        
 
         if counter == 0: #before GUI update - to prevent from unwanted resets because of bug in buffer_ind
              asyncio.create_task(frame_first_update())
         
-        elif check_updates(global_dict_sensors, GUI.buffer_sensors_dict) == True: #if there is a change, update it immediately
+        elif check_updates(global_dict_sensors, GUI.buffer_sensors_dict) == True: #if there is a change, update it immediately 
+            delta = global_dict_sensors['load_percent'] - GUI.buffer_sensors_dict['load_percent']
+            if delta > 0:
+                
+                GUI.draw_arrow(215, 260, 15, 20, 'red')
+            else:
+                GUI.draw_arrow(215, 260, 15, 20, 'black', True, 'down')
             asyncio.create_task(frame_first_update())
 
         counter += 1
@@ -109,10 +112,10 @@ def sub_cb(topic, msg, retained):
       
         #GUI_update()
         print(counter)
-    try:
-        dMQTT_function_mapping[decoded_topic](eval_dict) #it completely brokes that function 
-    except:
-        print(f"internal error for function mapped for {eval_dict}")
+    #try: #function mapping demo
+    #    dMQTT_function_mapping[decoded_topic](eval_dict) #it completely brokes that function 
+    #except:
+    #    print(f"internal error for function mapped for {eval_dict}")
 
 
 async def frame_first_update():
@@ -152,11 +155,14 @@ async def wifi_han(state):
         counter = 0 #reset counter, to show dipslay if mqtt is reestablished
     await asyncio.sleep(1)
     
+
 # If you connect with clean_session True, must re-subscribe (MQTT spec 3.1.2.4)
 async def conn_han(client):
     await client.subscribe('foo_topic', 1)
     await client.subscribe('home/kotlownia/bufor', 0)
     await client.subscribe('eink_ctrl/screen_onoff', 0)
+    await client.subscribe('solar_pwm', 0)
+    
 
 
 async def frame_update_async():
