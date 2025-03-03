@@ -44,7 +44,7 @@ And how physical screen looks like:
 # System flow (simplified):
 ```mermaid
 flowchart LR
-  sensors["1Wire sensors chain"] --> nymea["Nymea system (RPi Zero 2W)"]
+  sensors["1-Wire sensors chain"] --> nymea["Nymea system (RPi Zero 2W)"]
   nymea --> intMQTT["internal MQTT broker"]--> nymea
   intMQTT -.-> Network
   Network -.-> ESP32
@@ -52,9 +52,9 @@ flowchart LR
 ```
 
 
-# History:
+# Short history:
 
-The main problem after upgrading boiler room to 900l water buffer tank and wood boiler was - how to assess how much energy is stored? One termometer was not enough, because it can be very on the top (eg. 80°C) and cold in the middle (30-40°C). 
+The main problem after upgrading boiler room to 900l water buffer tank and wood boiler was - how to assess how much energy is stored? One temperature sensor was not enough, because it can be very on the top (eg. 80°C) and cold in the middle (30-40°C). 
 So I came up with idea I will attach nine DS18B20 sensors directly on the tank with magnets:
 
 ![356671924-50bb507e-9171-46c5-b194-4a0811f5c0e84](https://github.com/user-attachments/assets/add8e3f9-1729-4c93-8ffd-9f39b9a04425)
