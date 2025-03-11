@@ -8,7 +8,20 @@ solar_state_dict = {
 
 }
 
-mqtt_solarTECH_dict = { #taken from ESP32-C3 which monitors solar driver signal
+mqtt_solarTECH_dict = { #taken from ESP32-C3 which monitors solar driver PWM signals
+       'freq_solar_pump_Hz': 1000,
+       'PWM_duty_solar_pump_%': 0, #to be renamed, it is PWM supplied to pump by driver
+       'TECH_driver_percent_value':0, #recalculated PWM - it shows actual pump duty
+       'freq_feedback_Hz': 75,
+       'PWM_duty_feedback_%':0,
+       'solar_power_W' : 0,
+       'pump_power_W' : 0,
+       'pump_state' : "", 
+       'pump_gear' : 10
+}
+  
+#taken from ESP32-C3 sender node
+mqtt_solar_dict = {
        'freq_solar_pump_Hz': 1000,
        'PWM_duty_solar_pump_%': 0,
        'TECH_driver_percent_value':0,
@@ -19,7 +32,9 @@ mqtt_solarTECH_dict = { #taken from ESP32-C3 which monitors solar driver signal
        'pump_state' : "", 
        'pump_gear' : 10
 }
-  
+
+
+
 solarTECH_pump_state_description = [ #PWM return from the pump - 75Hz
     {"range":(0, 70),  "code": "E", "state": "The pump is working"},
     {"range":(73, 78), "code": "D", "state": "Warning - pump voltage out of range!"},
@@ -29,6 +44,9 @@ solarTECH_pump_state_description = [ #PWM return from the pump - 75Hz
     {"range":(97, 100),"code": "_", "state" :"Off"}
 ]
 
+
+
+#assuming that message is already decoded, however better to do it here
 def update_solar_stats(solar_state_dict, mqqt_solar_source_message):
     ...
 
