@@ -61,7 +61,7 @@ async def main(client):
         print(f'u16: {adc.read_u16()}')
         print(f'uv: {value_dict['sensor_voltage_mV']} mV')
         print(f'cisnienie (bar): {value_dict['pressure_bar']}')
-        await client.publish('home/kotlownia/solar/pressure_sensor', json.dumps(value_dict), qos = 0)
+        await client.publish('home/kotlownia/CO/pressure_sensor', json.dumps(value_dict), qos = 0)
         
 
 # Define configuration
