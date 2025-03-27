@@ -3,6 +3,7 @@ import time
 import machine
 import json
 
+
 #pwm0 = PWM(Pin(5), freq=75, duty_u16=32768) # create PWM object from a pin
 #pwm1 = PWM(Pin(6), freq= 1000, duty_u16 = 32768)
 
@@ -169,6 +170,26 @@ def solar_power(solar_dict):
         solar_dict[key_driver_calculated_duty] = calculated_duty
         solar_dict[key_water_per_minute] = water_per_minute
         
+        
+#espnow handling
+import aioespnow
+e = aioespnow.AIOESPNow()
+e.active(True)
+e.config(timeout_ms = 10000)
+CO_pressure_value = ''
+
+async def espnow_mqtt(e):
+    global CO_pressure_value
+    
+    async for mac, msg in e:
+        if mac is not None:
+            print(msg)
+            CO_pressure_value = msg
+        else:
+            CO_pressure_value = "no message"
+            print("no message")
+        
+        
 # clean.py Test of asynchronous mqtt client with clean session False.
 # (C) Copyright Peter Hinch 2017-2022.
 # Released under the MIT licence.
@@ -236,6 +257,8 @@ async def main(client):
         solar_power(mqtt_solar_dict)
 
         await client.publish('solar_pwm', json.dumps(mqtt_solar_dict), qos = 0)
+        await client.publish('home/kotlownia/CO/pressure_sensor', CO_pressure_value, qos = 0)
+        print(CO_pressure_value)
         await asyncio.sleep(4.4)
         print('publish', n)
         # If WiFi is down the following will pause for the duration.
@@ -251,6 +274,7 @@ config['keepalive'] = 120
 config['response_time'] = 90 
 
 asyncio.create_task(heartbeat())
+asyncio.create_task(espnow_mqtt(e))
 # Set up client
 MQTTClient.DEBUG = True  # Optional
 client = MQTTClient(config)
@@ -261,3 +285,4 @@ try:
 finally:  # Prevent LmacRxBlk:1 errors.
     client.close()
     asyncio.new_event_loop()
+
