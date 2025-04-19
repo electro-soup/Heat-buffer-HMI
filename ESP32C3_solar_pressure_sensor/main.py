@@ -37,22 +37,22 @@ sta.config(reconnects=20)
 value_dict = { 'sensor_voltage_mV': 0, 'pressure_bar' : 0
     }
 
-mac_peer = "40:4C:CA:F5:A5:68"
+mac_peer_master = "40:4C:CA:F5:A5:68"
 mac_peer_test = "18:8B:0E:84:3F:C0"
 
 e = espnow.ESPNow()
 e.active(True)
 
 
-peer = ubinascii.unhexlify(mac_peer.replace(':',''))
+peer_master = ubinascii.unhexlify(mac_peer_master.replace(':',''))
 
 peer_test =ubinascii.unhexlify(mac_peer_test.replace(':',''))
-e.add_peer(peer)
+e.add_peer(peer_master)
 e.add_peer(peer_test)
 
 
 
-e.send(peer,"starting...")
+e.send(peer_master,"starting...")
 e.send(peer_test,"starting...")
 
 def auto_wifi_channel():
@@ -60,16 +60,43 @@ def auto_wifi_channel():
     sta.config(channel = 1)
     state = False
     #scan through channel at init:
+    #scan through all channel - because it sets to 5 or 7 if main channel is 6
+    
+    wifi_stats = {}
+    best_channel = -1
+    for key in range(-4,20): #lazy way for latter best channel seek (cho 1 and 14)
+        wifi_stats[key]=0
+    
+    print("starting wifi channel scanning")
+    
     for ch_no in range(1, 15):
         sta.config(channel = ch_no)
-        if e.send(peer,"wifi test") == True:
-            state = True
-            break
+        
+        for i in range(0,50):
+            if e.send(peer_master,f"wifi_{ch_no}") == True:
+                wifi_stats[ch_no] += 1 
+                
+    #best_channel = max(wifi_stats, key = lambda key: wifi_stats[key])
+    #search for 3 adjacent channels
     
-    if state == True:
+    for i in range(1,15):
+        
+        if wifi_stats[i-1]>0 and wifi_stats[i]>0 and wifi_stats[i+1]>0:
+            best_channel = i
+            break
+    print(wifi_stats)
+    
+    
+    
+    if best_channel > 0:
+        sta.config(channel = best_channel)
         print(f"channel set {sta.config('channel')}")
     else:
         print("no channel configured - peer is disconnected")
+        wifi_reset()
+        
+    
+    
             
     
 auto_wifi_channel()
@@ -90,7 +117,11 @@ while True:
         print(f'cisnienie (bar): {value_dict['pressure_bar']}')
         
         #e.send(peer,json.dumps(value_dict))
-        state =  e.send(peer, json.dumps(value_dict))
+        for send_attempts in range(0, 10):
+            state =  e.send(peer_master, json.dumps(value_dict))
+            if state == True:
+                print(f"resend attempts: {send_attempts}")
+                break
         
         if state == False:
             print("message not sent")

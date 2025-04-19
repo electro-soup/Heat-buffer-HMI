@@ -183,7 +183,7 @@ async def espnow_mqtt(e):
     
     async for mac, msg in e:
         if mac is not None:
-            print(msg)
+            print(f"got msg via ESPnow:{msg}")
             CO_pressure_value = msg
         else:
             CO_pressure_value = "no message"
@@ -231,22 +231,24 @@ async def wifi_han(state):
         outages += 1
         print('WiFi is down.')
     await asyncio.sleep(1)
-timer = Timer(0)
-timer2 = Timer(2)
+
+#timer = Timer(0)
+#timer2 = Timer(1)
+
 async def main(client):
     try:
         await client.connect()
     except OSError:
         print('Connection failed.')
+        import machine
+        machine.reset()
         return
     
     n = 0
+    previous_pressure_value = ""
     while True:
+        loop_start = time.ticks_ms()
         watchdog.feed()
-        
-        
-        
-
         #change_pwm(1)
         #polling timers during loop: first 75Hz wave
         mqtt_solar_dict['duty_feedback_%'] = round( measure_duty_75(timer,75, timer_callback_75Hz,0.4))
@@ -256,14 +258,20 @@ async def main(client):
         pump_power_and_state(mqtt_solar_dict)
         solar_power(mqtt_solar_dict)
 
-        await client.publish('solar_pwm', json.dumps(mqtt_solar_dict), qos = 0)
-        await client.publish('home/kotlownia/CO/pressure_sensor', CO_pressure_value, qos = 0)
+        print(f"prevoius {previous_pressure_value}, actual {CO_pressure_value}")
+        await client.publish('home/solar_TECH', json.dumps(mqtt_solar_dict), qos = 0)
+        if previous_pressure_value != CO_pressure_value:
+           print(f"inside if prevoius {previous_pressure_value}, actual {CO_pressure_value}")
+           await client.publish('home/kotlownia/CO/pressure_sensor', CO_pressure_value, qos = 0)
+           previous_pressure_value = CO_pressure_value
         print(CO_pressure_value)
-        await asyncio.sleep(4.4)
+        await asyncio.sleep(20)
         print('publish', n)
         # If WiFi is down the following will pause for the duration.
         
         n += 1
+        loop_end = time.ticks_ms()
+        print(f"loop time: {time.ticks_diff(loop_end, loop_start)/1000}s")
 
 # Define configuration
 config['subs_cb'] = sub_cb
