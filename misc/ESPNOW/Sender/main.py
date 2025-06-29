@@ -28,17 +28,20 @@ sta.active(True)
 
 e = espnow.ESPNow()
 e.active(True)
-peer = b'\x18\x8B\x0E\x2C\x59\x28'   # MAC address of peer's wifi interface
-peer2 =  b'\x18\x8B\x0E\x2D\x4E\x80' 
+#peer2 = b'\x94\xa9\x90Gh\xbc'   # MAC address of peer's wifi interface
+peer =  b'\x18\x8b\x0e\x84?\xc0'
 e.add_peer(peer)      # Must add_peer() before send()
-e.add_peer(peer2)
+#e.add_peer(peer2)
 state = 0
 e.send(peer, "Starting...")
 channel= 0
 e_state = False
+
 while True:
     print(e.send(peer, "test", True))
-    e_state=e.send(peer2, "test", True)
+    #e_state=e.send(peer2, "test", True)
+    
+    e_state = True
     print(channel)
     
     if e_state == False:
@@ -49,7 +52,7 @@ while True:
          sta.config(channel = channel)
     else:
         print(f'sended on channel {channel}')
-        e.send(peer2, f'channel: {channel}', True)
+        #e.send(peer2, f'channel: {channel}', True)
     
          
     

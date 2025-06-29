@@ -3,6 +3,7 @@ import time
 import machine
 import json
 
+
 #pwm0 = PWM(Pin(5), freq=75, duty_u16=32768) # create PWM object from a pin
 #pwm1 = PWM(Pin(6), freq= 1000, duty_u16 = 32768)
 
@@ -169,6 +170,26 @@ def solar_power(solar_dict):
         solar_dict[key_driver_calculated_duty] = calculated_duty
         solar_dict[key_water_per_minute] = water_per_minute
         
+        
+#espnow handling
+import aioespnow
+e = aioespnow.AIOESPNow()
+e.active(True)
+e.config(timeout_ms = 10000)
+CO_pressure_value = ''
+
+async def espnow_mqtt(e):
+    global CO_pressure_value
+    
+    async for mac, msg in e:
+        if mac is not None:
+            print(f"got msg via ESPnow:{msg}")
+            CO_pressure_value = msg
+        else:
+            CO_pressure_value = "no message"
+            print("no message")
+        
+        
 # clean.py Test of asynchronous mqtt client with clean session False.
 # (C) Copyright Peter Hinch 2017-2022.
 # Released under the MIT licence.
@@ -210,22 +231,24 @@ async def wifi_han(state):
         outages += 1
         print('WiFi is down.')
     await asyncio.sleep(1)
-timer = Timer(0)
-timer2 = Timer(2)
+
+#timer = Timer(0)
+#timer2 = Timer(1)
+
 async def main(client):
     try:
         await client.connect()
     except OSError:
         print('Connection failed.')
+        import machine
+        machine.reset()
         return
     
     n = 0
+    previous_pressure_value = ""
     while True:
+        loop_start = time.ticks_ms()
         watchdog.feed()
-        
-        
-        
-
         #change_pwm(1)
         #polling timers during loop: first 75Hz wave
         mqtt_solar_dict['duty_feedback_%'] = round( measure_duty_75(timer,75, timer_callback_75Hz,0.4))
@@ -235,12 +258,20 @@ async def main(client):
         pump_power_and_state(mqtt_solar_dict)
         solar_power(mqtt_solar_dict)
 
-        await client.publish('solar_pwm', json.dumps(mqtt_solar_dict), qos = 0)
-        await asyncio.sleep(4.4)
+        print(f"prevoius {previous_pressure_value}, actual {CO_pressure_value}")
+        await client.publish('home/solar_TECH', json.dumps(mqtt_solar_dict), qos = 0)
+        if previous_pressure_value != CO_pressure_value:
+           print(f"inside if prevoius {previous_pressure_value}, actual {CO_pressure_value}")
+           await client.publish('home/kotlownia/CO/pressure_sensor', CO_pressure_value, qos = 0)
+           previous_pressure_value = CO_pressure_value
+        print(CO_pressure_value)
+        await asyncio.sleep(20)
         print('publish', n)
         # If WiFi is down the following will pause for the duration.
         
         n += 1
+        loop_end = time.ticks_ms()
+        print(f"loop time: {time.ticks_diff(loop_end, loop_start)/1000}s")
 
 # Define configuration
 config['subs_cb'] = sub_cb
@@ -251,6 +282,7 @@ config['keepalive'] = 120
 config['response_time'] = 90 
 
 asyncio.create_task(heartbeat())
+asyncio.create_task(espnow_mqtt(e))
 # Set up client
 MQTTClient.DEBUG = True  # Optional
 client = MQTTClient(config)
@@ -261,3 +293,4 @@ try:
 finally:  # Prevent LmacRxBlk:1 errors.
     client.close()
     asyncio.new_event_loop()
+
