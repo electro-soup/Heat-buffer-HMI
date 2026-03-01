@@ -8,7 +8,7 @@ Very alpha phase, GUI is still just as it is, however there are milestones achie
 - remote monitoring - I can assess that something is going wrong, it will be developed into alarm system which can be displayed on the screen
 
 # How to install and configure
-**System is tailored to specific setup, hovewer there is instruction how to setup such system in general:**
+**System is tailored to specific setup, however there is instruction how to setup such system in general:**
 1) Install Nymea system via Rapsberry Pi Imager (Operation System -> Other specific-purpose OS -> Home assistants and home automation -> nymea:core image)
 2) Do initial setup through nymea-app (PC or on Android device)
 3) In nymea:app system settings, tab Plugins, search and install internal-mqtt-client and One-wire plugins
