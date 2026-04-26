@@ -1,6 +1,4 @@
 
-
-
 #for quick demo version - clean.py is copied here
 # clean.py Test of asynchronous mqtt client with clean session.
 # (C) Copyright Peter Hinch 2017-2019.
@@ -25,13 +23,10 @@ import GUI
 outages = 0
 temp = []
 
-#WDT setup:
-
+# Watchdog setup:
 from machine import WDT
 minutes = 20
 watchdog = WDT(timeout = 1000 * 60 * minutes)
-
-
 
 def test_mapping(dummy):
     print('home/kotlownia/bufor decoded')
@@ -46,8 +41,7 @@ def display_MQTT_control(command): #there is error for that, but still works
 dMQTT_function_mapping = {
     'home/kotlownia/bufor' : test_mapping,
     'eink_ctrl/screen_onoff':display_MQTT_control
-    
-}
+    }
 
 counter = 0
 global_dict_sensors = {}
@@ -58,10 +52,6 @@ def check_updates(previous_dict, updated_dict):
     if updated_dict['load_percent'] != previous_dict['load_percent']:
         print('there is a difference!')
         return True
-    
-    #elif abs(updated_dict['solar_T0'] - previous_dict['solar_T0']) > 10:
-     #   return True
-    
     else: 
         return False 
 
@@ -82,56 +72,33 @@ def sub_cb(topic, msg, retained):
     
     #TODO - dictionary of topics and connected function for them
     if decoded_topic == 'home/kotlownia/bufor':
-        
-
         temp_msg = msg.decode()
         temp_dict = json.loads(temp_msg)
-        
-        
+
         global_dict_sensors = temp_dict  #copy it to the global dict (temp solution) 
         GUI.framebuffer.fill('white')
-       
-
         if counter == 0: #before GUI update - to prevent from unwanted resets because of bug in buffer_ind
              asyncio.create_task(frame_first_update())
-        
         elif check_updates(global_dict_sensors, GUI.buffer_sensors_dict) == True: #if there is a change, update it immediately 
             delta = global_dict_sensors['load_percent'] - GUI.buffer_sensors_dict['load_percent']
             if delta > 0:
-                
                 GUI.draw_arrow(215, 260, 15, 20, 'red')
             else:
                 GUI.draw_arrow(215, 260, 15, 20, 'black', True, 'down')
             asyncio.create_task(frame_first_update())
-
         counter += 1
-        
-
         GUI.update_sensors_dict(global_dict_sensors, GUI.buffer_sensors_dict) 
         GUI.update_sensors_dict(global_dict_sensors, GUI.solar_sensors_dict)
-      
-        #GUI_update()
         print(counter)
-    #try: #function mapping demo
-    #    dMQTT_function_mapping[decoded_topic](eval_dict) #it completely brokes that function 
-    #except:
-    #    print(f"internal error for function mapped for {eval_dict}")
-
 
 async def frame_first_update():
      await asyncio.sleep(1) # wait a second to exit mqtt callback
-     test =  GUI.eink_update(GUI.GUI_update)
+     test =  GUI.eink_update(GUI.GUI_update) #? 
      test() 
      print('!!!!! first frame update')
      
-
-
-     
-
-
 async def frame_clear_async():
      GUI.clear_screen()
-
 
 # Demonstrate scheduler is operational.
 async def heartbeat():
@@ -155,7 +122,6 @@ async def wifi_han(state):
         counter = 0 #reset counter, to show dipslay if mqtt is reestablished
     await asyncio.sleep(1)
     
-
 # If you connect with clean_session True, must re-subscribe (MQTT spec 3.1.2.4)
 async def conn_han(client):
     await client.subscribe('foo_topic', 1)
@@ -163,8 +129,6 @@ async def conn_han(client):
     await client.subscribe('eink_ctrl/screen_onoff', 0)
     await client.subscribe('solar_pwm', 0)
     
-
-
 async def frame_update_async():
      while True:
           global counter
@@ -181,34 +145,24 @@ async def frame_update_async():
                   x_pos_of_string = (400 - (GUI.font15_testall.max_width()*len(text_to_print)))/2
                   x_pos_of_string = round(x_pos_of_string)
                   GUI.color_writer.print(text_to_print, 150, x_pos_of_string, "black")
-                  GUI.frame_update()
-              
+                  GUI.frame_update()              
               if waiting_counter == 60:
                   GUI.clear_screen()
-
-
+        
           print("async frame update")
           previous_meas_dict = global_dict_sensors
           # TODO - check timings here and flow
           GUI.GUI_update()
           GUI.frame_update()
-
           await asyncio.sleep(60*update_interval_minutes)
          
-
-
 async def main(client):
     try:
         await client.connect()
-        
     except OSError:
         print('Connection failed.')
         GUI.clear_framebuffers()
-           
-        
-        #frame_update()
-        asyncio.create_task(frame_clear_async())
-       
+        asyncio.create_task(frame_clear_async())       
     n = 0
 
     while True:
@@ -218,8 +172,7 @@ async def main(client):
         await client.publish('result', '{} repubs: {} outages: {}'.format(n, client.REPUB_COUNT, outages), qos = 1)
         n += 1
         watchdog.feed()
-     
-    
+
 # Define configuration
 config['subs_cb'] = sub_cb
 config['wifi_coro'] = wifi_han
@@ -237,25 +190,18 @@ GUI.frame_update()
 
 # Set up client
 MQTTClient.DEBUG = True  # Optional
-
 client = MQTTClient(config)
-
-
 asyncio.create_task(heartbeat())
 asyncio.create_task(frame_update_async())
 
 ### main part - starting asyncio loop event
-
 try:
     asyncio.run(main(client))
-
 except OSError as eink_display:
         print("OSError:", eink_display)
-        
         # TODO handling of those errors - when I ctr-c repl, then it goes straight to reset point
 except Exception as eink_display:
         print("exception error:", eink_display)
-        
 finally:
     client.close()  # Prevent LmacRxBlk:1 errors
     asyncio.new_event_loop() 
