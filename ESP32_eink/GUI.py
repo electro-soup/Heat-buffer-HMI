@@ -77,10 +77,10 @@ def frame_update():
 #myData = array.array('I', [10,10,120,30,30,61])
 
 from writer import Writer
-import font42_bufferload
-import font12_temperature
-import font15_testall
-import font3Mono
+import fonts.font42_bufferload as font42_bufferload
+import fonts.font12_temperature as font12_temperature
+import fonts.font15_testall as font15_testall
+import fonts.font3Mono as font3Mono
 
 #getting bigger font using Writer class and some code from the internet
 
