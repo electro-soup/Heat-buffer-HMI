@@ -2,6 +2,7 @@ from machine import Pin, Timer, PWM, UART
 import time
 import machine
 import json
+import network
 
 
 #pwm0 = PWM(Pin(5), freq=75, duty_u16=32768) # create PWM object from a pin
@@ -22,15 +23,11 @@ total_pulses_1000 = 0
 pin_75Hz = Pin(1, Pin.IN)
 pin_1000Hz = Pin(0, Pin.IN)
 
-# def change_pwm(step_percent):
-#         percent_pulses = round(65535/100)
-#         duty= pwm0.duty_u16()
-#         new_duty = duty + round(percent_pulses * step_percent)
-#         if new_duty>65535:
-#                 new_duty = 2
-#         pwm0.duty_u16(new_duty)
-#         pwm1.duty_u16(new_duty)
-#         print(f"PWMout duty:f{round(new_duty/65536 * 100)}%")
+wlan = network.WLAN()
+wlan.active(False)
+time.sleep(1)
+wlan.active(True)
+print(wlan.scan())
 
 def timer_callback_75Hz(t):
        global high_pulses_75, total_pulses_75
@@ -55,10 +52,7 @@ def timer_callback_1000Hz_direct(t):
 
 def measure_duty_75(timer, PWM_freq, callback, sleep_time):
      global high_pulses_75, total_pulses_75
-     
-
      timer.init(mode = Timer.PERIODIC, freq = PWM_freq * 200, callback = callback)
-     
      time.sleep(sleep_time)
      timer.deinit()
      duty = high_pulses_75/total_pulses_75 * 100
@@ -69,8 +63,6 @@ def measure_duty_75(timer, PWM_freq, callback, sleep_time):
 
 def measure_duty_1000(timer, PWM_freq, callback, sleep_time):
      global high_pulses_1000, total_pulses_1000
-     
-
      timer.init(mode = Timer.PERIODIC, freq = PWM_freq * 50, callback = callback)
      print(f"sleep time {sleep_time}")
      time.sleep(sleep_time)
@@ -80,11 +72,8 @@ def measure_duty_1000(timer, PWM_freq, callback, sleep_time):
      high_pulses_1000 = 0
      total_pulses_1000 = 0
      return duty
-     
 
 sleep_time = 0.1
-
-
 mqtt_solar_dict = {
        'freq_solar_pump_Hz': 1000,
        'PWM_duty_solar_pump_%': 0,
@@ -94,8 +83,9 @@ mqtt_solar_dict = {
        'solar_power_W' : 0,
        'pump_power_W' : 0,
        'pump_state' : "", 
-       'pump_gear' : 10
-}
+       'pump_gear' : 10,
+       'wifi_channel': 0
+        }
 
 def pump_power_and_state(solar_dict):
      
@@ -105,9 +95,8 @@ def pump_power_and_state(solar_dict):
      key_pump_duty = 'duty_feedback_%'
      key_pump_power = 'pump_power_W'
      key_pump_state = 'pump_state'
-
      pump_duty = solar_dict[key_pump_duty]
-
+     
      if 0 <= pump_duty <= 70:
           pump_power = pump_duty
           pump_state = 'E'
@@ -153,10 +142,9 @@ def solar_power(solar_dict):
         calculated_delta = 0
 
         calculated_duty = 0
-        calculated_power=0
+        calculated_power = 0
         #calculate internal duty used by solar pump driver  
-        # 15% PWM ~ 1% of internal duty, 88% - 100%
-        #   
+        # 15% PWM ~ 1% of internal duty, 88% - 100%  
         PWM_duty = solar_dict[key_PWM_duty]
         if PWM_duty > 14:
             calculated_duty = (PWM_duty- percent_shift_value) / alfa
@@ -176,17 +164,27 @@ import aioespnow
 e = aioespnow.AIOESPNow()
 e.active(True)
 e.config(timeout_ms = 10000)
-CO_pressure_value = ''
+CO_pressure_value = b''
+SOLAR_pressure_value = b''
+SOLAR_ESP32_MAC = b'\xf0\x9e\x9e\xb5U\x94'
 
 async def espnow_mqtt(e):
     global CO_pressure_value
-    
+    global SOLAR_pressure_value
     async for mac, msg in e:
         if mac is not None:
-            print(f"got msg via ESPnow:{msg}")
-            CO_pressure_value = msg
+            print(mac)
+            if mac == SOLAR_ESP32_MAC:
+                print(f"got msg via ESPnow:{msg} - from solar")
+                SOLAR_pressure_value = msg
+                #await client.publish('home/kotlownia/solar/pressure_sensor', CO_pressure_value, qos = 0)
+            else:
+                print(f"got msg via ESPnow:{msg}")
+                CO_pressure_value = msg
+                #await client.publish('home/kotlownia/CO/pressure_sensor', CO_pressure_value, qos = 0)
         else:
             CO_pressure_value = "no message"
+            SOLAR_pressure_value = "no message"
             print("no message")
         
         
@@ -209,8 +207,11 @@ from mqtt_as import MQTTClient
 from mqtt_local import wifi_led, blue_led, config
 import uasyncio as asyncio
 
+
 outages = 0
 watchdog = machine.WDT(timeout = 1000 * 60 * 1)
+
+
 # Demonstrate scheduler is operational.
 async def heartbeat():
     s = True
@@ -232,65 +233,71 @@ async def wifi_han(state):
         print('WiFi is down.')
     await asyncio.sleep(1)
 
-#timer = Timer(0)
-#timer2 = Timer(1)
+timer = Timer(0)
+timer2 = Timer(1)
 
 async def main(client):
+    global CO_pressure_value
+    
     try:
         await client.connect()
-    except OSError:
+	print("Connection SUCCESS!")
+    except OSError as e:
         print('Connection failed.')
-        import machine
+        print(e)
         machine.reset()
-        return
+    
     
     n = 0
-    previous_pressure_value = ""
-    while True:
-        loop_start = time.ticks_ms()
-        watchdog.feed()
-        #change_pwm(1)
-        #polling timers during loop: first 75Hz wave
-        mqtt_solar_dict['duty_feedback_%'] = round( measure_duty_75(timer,75, timer_callback_75Hz,0.4))
-        # round(measure_duty_1000(timer2,1000, timer_callback_1000Hz,0.2))
-        mqtt_solar_dict['duty_solar_pump_%'] = measure_duty_1000(timer2,1000, timer_callback_1000Hz_direct,0.2 )
-        
-        pump_power_and_state(mqtt_solar_dict)
-        solar_power(mqtt_solar_dict)
-
-        print(f"prevoius {previous_pressure_value}, actual {CO_pressure_value}")
-        await client.publish('home/solar_TECH', json.dumps(mqtt_solar_dict), qos = 0)
-        if previous_pressure_value != CO_pressure_value:
-           print(f"inside if prevoius {previous_pressure_value}, actual {CO_pressure_value}")
-           await client.publish('home/kotlownia/CO/pressure_sensor', CO_pressure_value, qos = 0)
-           previous_pressure_value = CO_pressure_value
-        print(CO_pressure_value)
-        await asyncio.sleep(20)
-        print('publish', n)
-        # If WiFi is down the following will pause for the duration.
-        
-        n += 1
-        loop_end = time.ticks_ms()
-        print(f"loop time: {time.ticks_diff(loop_end, loop_start)/1000}s")
-
+    previous_pressure_value = b""
+    print("[INFO] Entering main loop")
+    try:
+        while True:
+       	   loop_start = time.ticks_ms()
+           watchdog.feed()
+           print("[INFO] Watchdog feeded")
+           #polling timers during loop: first 75Hz wave
+           mqtt_solar_dict['duty_feedback_%'] = round( measure_duty_75(timer,75, timer_callback_75Hz,0.4))
+           # round(measure_duty_1000(timer2,1000, timer_callback_1000Hz,0.2))
+           mqtt_solar_dict['duty_solar_pump_%'] = measure_duty_1000(timer2,1000, timer_callback_1000Hz_direct,0.2 )
+           pump_power_and_state(mqtt_solar_dict)
+           solar_power(mqtt_solar_dict)
+           mqtt_solar_dict['wifi_channel'] = wlan.config('channel')
+           try:
+           	await client.publish('home/kotlownia/solar_TECH', json.dumps(mqtt_solar_dict), qos = 0)
+           	await client.publish('home/kotlownia/CO/pressure_sensor', CO_pressure_value, qos = 0)
+           	await client.publish('home/kotlownia/solar/pressure_sensor', SOLAR_pressure_value, qos = 0)
+           except Exception as e:
+		print(f"[WARN] Exception from publishing mqtt: {e}")
+           print(CO_pressure_value)
+           await asyncio.sleep(20)
+          
+           # If WiFi is down the following will pause for the duration.
+           print(f"id(previous_pressure_value): {id(previous_pressure_value)}")
+          
+           loop_end = time.ticks_ms()
+           print(f"[main.py] loop time: {time.ticks_diff(loop_end, loop_start)/1000}s")
+    except Exception as e:
+	   print(f"[WARN] Exception from while loop: {e}")
+           
+     
 # Define configuration
 config['subs_cb'] = sub_cb
 config['wifi_coro'] = wifi_han
 config['clean'] = False
-config['will'] = ('result', 'Goodbye cruel world!', False, 0)
+config['will'] = ('home/kotlownia/solar_TECH', 'Goodbye cruel world!', False, 0)
 config['keepalive'] = 120
-config['response_time'] = 90 
+config['response_time'] = 90
 
 asyncio.create_task(heartbeat())
 asyncio.create_task(espnow_mqtt(e))
+
 # Set up client
 MQTTClient.DEBUG = True  # Optional
 client = MQTTClient(config)
 
 try:
     asyncio.run(main(client))
-
 finally:  # Prevent LmacRxBlk:1 errors.
     client.close()
     asyncio.new_event_loop()
-
